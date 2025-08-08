@@ -3,7 +3,7 @@
 const CC_TAG = "LABELMATE_CLASSIFICATION";
 const CC_TITLE = "Document Classification";
 
-// Přednastavené štítky pro 3 jazyky (DŮLEŽITÉ – chybělo)
+// Přednastavené štítky pro 3 jazyky
 const LABEL_SETS = {
   EN: ["TLP:Internal", "TLP:Protected", "TLP:StrictlyProtected"],
   CZ: ["TLP:Interní", "TLP:Chráněný", "TLP:PřísněChráněný"],
@@ -22,6 +22,32 @@ function getSavedLangOverride() {
 }
 function saveLangOverride(v) {
   try { localStorage.setItem(LS_KEY, v); } catch {}
+}
+
+// ===== UI status helpery =====
+function setStatusOk(msg) {
+  const el = document.getElementById("status");
+  if (!el) return;
+  el.classList.remove("error");
+  el.classList.add("ok");
+  el.textContent = msg || "";
+}
+function setStatusError(msg) {
+  const el = document.getElementById("status");
+  if (!el) return;
+  el.classList.remove("ok");
+  el.classList.add("error");
+  el.textContent = msg || "";
+}
+function clearStatusProcessing() {
+  const el = document.getElementById("status");
+  if (!el) return;
+  // „neutral“ stav při startu akce
+  el.classList.remove("ok", "error");
+  el.textContent = "";
+}
+function setBusy(isBusy) {
+  document.querySelectorAll("#labelsContainer button").forEach(b => b.disabled = isBusy);
 }
 
 // Detekce jazyka pouze z Office kontextu
@@ -51,45 +77,52 @@ function renderLabels(langCode) {
   });
 }
 
-// Smaže předchozí klasifikační CC (pokud existuje)
+// Bezpečné smazání předchozího klasifikačního CC (pokud existuje)
 async function removeExistingClassificationCC(context) {
   const existing = context.document.contentControls.getByTag(CC_TAG);
   existing.load("items");
   await context.sync();
   if (existing.items.length > 0) {
     existing.items.forEach(cc => cc.delete(true)); // true = smaže i obsah uvnitř
-    await context.sync();
   }
+  await context.sync();
 }
 
-// smaže staré „sirotčí“ odstavce se štítky (bez CC) z horní části dokumentu
+// Bezpečný úklid starých „sirotků“ (odstavce s textem štítku bez CC)
+// OPRAVA: nepřistupujeme na .items bez load; místo toho používáme getFirstOrNullObject()
 async function cleanupOrphanLabels(context) {
   const paras = context.document.body.paragraphs;
   paras.load("items");
   await context.sync();
 
   const limit = Math.min(paras.items.length, 25);
+  const checks = [];
   for (let i = 0; i < limit; i++) {
     const p = paras.items[i];
-    p.load(["text", "contentControls"]);
+    p.load("text");
+    const firstCC = p.contentControls.getFirstOrNullObject();
+    firstCC.load("isNullObject");
+    checks.push({ p, firstCC });
   }
   await context.sync();
 
-  for (let i = 0; i < limit; i++) {
-    const p = paras.items[i];
-    const txt = (p.text || "").trim();
-    const hasCC = p.contentControls.items && p.contentControls.items.length > 0;
-    if (!hasCC && ALL_LABEL_TEXTS.includes(txt)) {
-      p.delete();
+  for (const item of checks) {
+    const txt = (item.p.text || "").trim();
+    const hasAnyCC = !item.firstCC.isNullObject;
+    if (!hasAnyCC && ALL_LABEL_TEXTS.includes(txt)) {
+      item.p.delete();
     }
   }
   await context.sync();
 }
 
 // Vloží / nahradí klasifikaci v jediném Content Controlu
+let running = false; // jednoduchý „mutex“, aby se nespouštělo víckrát najednou
 async function applyClassification(label) {
-  const statusEl = document.getElementById("status");
-  if (statusEl) { statusEl.style.color = "green"; statusEl.textContent = ""; }
+  if (running) return;
+  running = true;
+  setBusy(true);
+  clearStatusProcessing();
 
   try {
     await Word.run(async (context) => {
@@ -118,7 +151,7 @@ async function applyClassification(label) {
         cc.color = "#ff0000";
         await context.sync();
       } else {
-        // uklidit staré sirotky
+        // uklidit staré sirotky (OPRAVA uvnitř funkce)
         await cleanupOrphanLabels(context);
 
         // vložit nový CC na začátek
@@ -140,16 +173,15 @@ async function applyClassification(label) {
       }
     });
 
-    if (statusEl) statusEl.textContent = `Klasifikace „${label}” byla úspěšně vložena.`;
+    setStatusOk(`Klasifikace „${label}” byla úspěšně vložena.`);
   } catch (error) {
     console.error(error);
-    if (statusEl) {
-      statusEl.style.color = "crimson";
-      statusEl.textContent = "Nastala chyba při aplikaci klasifikace.";
-    }
+    setStatusError(`Nastala chyba při aplikaci klasifikace: ${error?.message || error}`);
+  } finally {
+    setBusy(false);
+    running = false;
   }
 }
-
 
 // Inicializace UI a jazykové logiky
 function initLanguageUI() {
