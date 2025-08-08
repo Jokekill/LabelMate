@@ -1,15 +1,14 @@
 // ===== LabelMate – client-only (bez internetu) =====
 
-// Přednastavené štítky pro 3 jazyky
-const LABEL_SETS = {
-  EN: ["TLP:Internal", "TLP:Protected", "TLP:StrictlyProtected"],
-  CZ: ["TLP:Interní", "TLP:Chráněný", "TLP:PřísněChráněný"],
-  SK: ["TLP:Interné", "TLP:Chránené", "TLP:PrísneChránené"],
-};
-
-// Tag a název našeho content controlu s klasifikací
 const CC_TAG = "LABELMATE_CLASSIFICATION";
 const CC_TITLE = "Document Classification";
+
+// všechny možné texty štítků (kvůli úklidu starých odstavců)
+const ALL_LABEL_TEXTS = [
+  "TLP:Internal","TLP:Protected","TLP:StrictlyProtected",
+  "TLP:Interní","TLP:Chráněný","TLP:PřísněChráněný",
+  "TLP:Interné","TLP:Chránené","TLP:PrísneChránené"
+];
 
 // LocalStorage klíč pro ruční volbu jazyka
 const LS_KEY = "labelmate_lang_override";
@@ -61,7 +60,30 @@ async function removeExistingClassificationCC(context) {
   }
 }
 
-// Aplikace klasifikace do needitovatelného Content Control na začátek dokumentu
+// smaže staré „sirotčí“ odstavce se štítky (bez CC) z horní části dokumentu
+async function cleanupOrphanLabels(context) {
+  const paras = context.document.body.paragraphs;
+  paras.load("items");
+  await context.sync();
+
+  const limit = Math.min(paras.items.length, 25); // koukneme na prvních pár odstavců
+  for (let i = 0; i < limit; i++) {
+    const p = paras.items[i];
+    p.load(["text", "contentControls"]);
+  }
+  await context.sync();
+
+  for (let i = 0; i < limit; i++) {
+    const p = paras.items[i];
+    const txt = (p.text || "").trim();
+    const hasCC = p.contentControls.items && p.contentControls.items.length > 0;
+    if (!hasCC && ALL_LABEL_TEXTS.includes(txt)) {
+      p.delete(); // smazat starý volný odstavec se štítkem
+    }
+  }
+  await context.sync();
+}
+
 async function applyClassification(label) {
   const statusEl = document.getElementById("status");
   statusEl.style.color = "green";
@@ -69,31 +91,52 @@ async function applyClassification(label) {
 
   try {
     await Word.run(async (context) => {
-      // 1) Zruš starou klasifikaci (ať je vždy jen jedna)
-      await removeExistingClassificationCC(context);
-
-      // 2) Vlož odstavec s textem na samý začátek dokumentu
-      const p = context.document.body.insertParagraph(label, Word.InsertLocation.start);
-
-      // 3) Obal odstavec do Content Control
-      const cc = p.insertContentControl();
-      cc.tag = CC_TAG;
-      cc.title = CC_TITLE;
-      cc.color = "#ff0000";               // volitelné zvýraznění rámečku
-      cc.appearance = "BoundingBox";      // "BoundingBox" | "Tags" | "Hidden"
-      cc.cannotEdit = true;               // zamkne editaci obsahu
-      cc.removeWhenEdited = false;        // pokus o editaci nespustí odstranění
-
-      // (Volitelná úprava vzhledu textu)
-      p.font.bold = true;
-      p.font.size = 14;
-
+      // 1) je tam už náš CC? -> jen vyměň text uvnitř
+      const found = context.document.contentControls.getByTag(CC_TAG);
+      found.load("items");
       await context.sync();
+
+      if (found.items.length > 0) {
+        const cc = found.items[0];
+        // replace obsahu, žádné nové odstavce
+        cc.insertText(label, Word.InsertLocation.replace);
+        cc.cannotEdit = true;
+        cc.cannotDelete = true;
+        cc.appearance = "BoundingBox";
+        cc.color = "#ff0000";
+
+        // pro jistotu i zvětšit/tučně – přes rozsah CC
+        const range = cc.getRange();
+        range.font.bold = true;
+        range.font.size = 14;
+
+        await context.sync();
+      } else {
+        // 2) uklidit staré sirotčí odstavce z dřívějška
+        await cleanupOrphanLabels(context);
+
+        // 3) vložit odstavec úplně na začátek a obalit CC
+        const p = context.document.body.insertParagraph(label, Word.InsertLocation.start);
+
+        const cc = p.insertContentControl();
+        cc.tag = CC_TAG;
+        cc.title = CC_TITLE;
+        cc.cannotEdit = true;
+        cc.cannotDelete = true;
+        cc.appearance = "BoundingBox";
+        cc.color = "#ff0000";
+
+        // styling textu uvnitř CC
+        p.font.bold = true;
+        p.font.size = 14;
+
+        await context.sync();
+      }
     });
 
     statusEl.textContent = `Klasifikace „${label}” byla úspěšně vložena.`;
   } catch (error) {
-    console.error("Error:", error);
+    console.error(error);
     if (error instanceof OfficeExtension.Error) {
       console.error("Debug info:", JSON.stringify(error.debugInfo));
     }
