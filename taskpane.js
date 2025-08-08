@@ -99,32 +99,43 @@ async function applyClassification(label) {
 
       if (found.items.length > 0) {
         const cc = found.items[0];
-        cc.insertText(label, Word.InsertLocation.replace);
+
+        // 1) dočasně odemknout
+        cc.cannotEdit = false;
+        cc.cannotDelete = false;
+        await context.sync();
+
+        // 2) přepsat obsah bezpečně přes range
+        const range = cc.getRange();
+        range.insertText(label, Word.InsertLocation.replace);
+        range.font.bold = true;
+        range.font.size = 14;
+
+        // 3) znovu zamknout
         cc.cannotEdit = true;
         cc.cannotDelete = true;
         cc.appearance = "BoundingBox";
         cc.color = "#ff0000";
-
-        const range = cc.getRange();
-        range.font.bold = true;
-        range.font.size = 14;
-
         await context.sync();
       } else {
+        // uklidit staré sirotky
         await cleanupOrphanLabels(context);
 
+        // vložit nový CC na začátek
         const p = context.document.body.insertParagraph(label, Word.InsertLocation.start);
         const cc = p.insertContentControl();
         cc.tag = CC_TAG;
         cc.title = CC_TITLE;
+
+        // styl textu
+        p.font.bold = true;
+        p.font.size = 14;
+
+        // zamknout až NAKONEC (po vložení)
         cc.cannotEdit = true;
         cc.cannotDelete = true;
         cc.appearance = "BoundingBox";
         cc.color = "#ff0000";
-
-        p.font.bold = true;
-        p.font.size = 14;
-
         await context.sync();
       }
     });
@@ -132,9 +143,13 @@ async function applyClassification(label) {
     if (statusEl) statusEl.textContent = `Klasifikace „${label}” byla úspěšně vložena.`;
   } catch (error) {
     console.error(error);
-    if (statusEl) { statusEl.style.color = "crimson"; statusEl.textContent = "Nastala chyba při aplikaci klasifikace."; }
+    if (statusEl) {
+      statusEl.style.color = "crimson";
+      statusEl.textContent = "Nastala chyba při aplikaci klasifikace.";
+    }
   }
 }
+
 
 // Inicializace UI a jazykové logiky
 function initLanguageUI() {
