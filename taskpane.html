@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>LabelMate</title>
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 30px; background-color: #ffffff; color: #333; max-width: 400px; margin: auto; }
+        h1 { font-size: 24px; margin-bottom: 20px; color: #0078d4; text-align: center; }
+        button { width: 100%; margin: 10px 0; padding: 14px; font-size: 16px; border-radius: 6px; border: none; cursor: pointer; background-color: #0078d4; color: white; transition: background-color 0.3s, transform 0.1s; }
+        button:hover { background-color: #005a9e; transform: scale(1.02); }
+        #status { margin-top: 20px; text-align: center; font-weight: 500; color: green; }
+    </style>
+</head>
+
+<body>
+    <h1>LabelMate</h1>
+    <p>Zvolte úroveň klasifikace:</p>
+    <button id="btn-internal">TLP:Interní</button>
+    <button id="btn-protected">TLP:Chráněný</button>
+    <button id="btn-strict">TLP:PřísněChráněný</button>
+
+    <div id="status"></div>
+
+    <script>
+        Office.onReady(() => {
+            document.getElementById("btn-internal").onclick = () => applyClassification("TLP:Interní");
+            document.getElementById("btn-protected").onclick = () => applyClassification("TLP:Chráněný");
+            document.getElementById("btn-strict").onclick = () => applyClassification("TLP:PřísněChráněný");
+        });
+
+        async function applyClassification(label) {
+            try {
+                await Word.run(async (context) => {
+                    const sections = context.document.sections;
+                    context.load(sections, 'headers');
+                    await context.sync();
+
+                    sections.items.forEach(section => {
+                        const header = section.getHeader("Primary");
+                        header.clear(); // umožní reklasifikaci odstraněním předchozí klasifikace
+                        const paragraph = header.insertParagraph(label, Word.InsertLocation.start);
+                        paragraph.font.bold = true;
+                        paragraph.font.size = 14;
+                    });
+
+                    await context.sync();
+                    document.getElementById("status").innerText = `Klasifikace \"${label}\" byla úspěšně aplikována.`;
+                });
+            } catch (error) {
+                console.error("Error: " + error);
+                if (error instanceof OfficeExtension.Error) {
+                    console.error("Debug info: " + JSON.stringify(error.debugInfo));
+                }
+                document.getElementById("status").innerText = "Nastala chyba při aplikaci klasifikace.";
+            }
+        }
+    </script>
+</body>
+
+</html>
