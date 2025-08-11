@@ -83,7 +83,11 @@ async function removeExistingClassificationCC(context) {
   existing.load("items");
   await context.sync();
   if (existing.items.length > 0) {
-    existing.items.forEach(cc => cc.delete(true)); // true = smaže i obsah uvnitř
+    existing.items.forEach(cc => {
+      if (!cc.isNullObject) {
+        cc.delete(true); // true = smaže i obsah uvnitř
+      }
+    });
   }
   await context.sync();
 }
@@ -132,24 +136,26 @@ async function applyClassification(label) {
 
       if (found.items.length > 0) {
         const cc = found.items[0];
+        if (!cc.isNullObject) {
+          // Manipulace s Content Controlem
+          // 1) dočasně odemknout
+          cc.cannotEdit = false;
+          cc.cannotDelete = false;
+          await context.sync();
 
-        // 1) dočasně odemknout
-        cc.cannotEdit = false;
-        cc.cannotDelete = false;
-        await context.sync();
+          // 2) přepsat obsah bezpečně přes range
+          const range = cc.getRange();
+          range.insertText(label, Word.InsertLocation.replace);
+          range.font.bold = true;
+          range.font.size = 14;
 
-        // 2) přepsat obsah bezpečně přes range
-        const range = cc.getRange();
-        range.insertText(label, Word.InsertLocation.replace);
-        range.font.bold = true;
-        range.font.size = 14;
-
-        // 3) znovu zamknout
-        cc.cannotEdit = true;
-        cc.cannotDelete = true;
-        cc.appearance = "BoundingBox";
-        cc.color = "#ff0000";
-        await context.sync();
+          // 3) znovu zamknout
+          cc.cannotEdit = true;
+          cc.cannotDelete = true;
+          cc.appearance = "BoundingBox";
+          cc.color = "#ff0000";
+          await context.sync();
+        }
       } else {
         // uklidit staré sirotky (OPRAVA uvnitř funkce)
         await cleanupOrphanLabels(context);
