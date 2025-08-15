@@ -61,19 +61,24 @@ function hideMissingBanner() {
 async function hasClassificationCC() {
   let exists = false;
   await Word.run(async (context) => {
-    const found = context.document.contentControls.getByTag(CC_TAG);
-    found.load("items");
-    await context.sync();
-
-    if (found.items && found.items.length > 0 && !found.items[0].isNullObject) {
-      const rng = found.items[0].getRange("Content");
-      rng.load("text");
+    try {
+      const found = context.document.contentControls.getByTag(CC_TAG);
+      found.load("items");
       await context.sync();
-      if ((rng.text || "").trim().length > 0) {
-        exists = true;
+
+      if (found.items && found.items.length > 0 && !found.items[0].isNullObject) {
+        const rng = found.items[0].getRange("Content");
+        rng.load("text");
+        await context.sync();
+        if ((rng.text || "").trim().length > 0) {
+          exists = true;
+        }
       }
+    } catch (err) {
+      console.error("Error in hasClassificationCC:", err);
     }
   });
+  console.log("hasClassificationCC result:", exists);
   return exists;
 }
 
@@ -82,7 +87,12 @@ async function hasClassificationCC() {
 async function updateMissingBanner() {
   try {
     const exists = await hasClassificationCC();
-    if (exists) hideMissingBanner(); else showMissingBanner();
+    console.log("updateMissingBanner - CC exists:", exists);
+    if (exists) {
+      hideMissingBanner();
+    } else {
+      showMissingBanner();
+    }
   } catch (e) {
     // Fail-safe: když kontrola selže, raději banner ukázat
     showMissingBanner();

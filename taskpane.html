@@ -1,46 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="cs">
 <head>
   <meta charset="utf-8" />
   <title>LabelMate</title>
+
   <!-- Office.js z oficiální CDN -->
-  <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-  <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 30px; background-color: #ffffff; color: #333; max-width: 420px; margin: auto; }
-    h1 { font-size: 24px; margin-bottom: 20px; color: #0078d4; text-align: center; }
-    .row { margin-bottom: 12px; }
-    button { width: 100%; margin: 8px 0; padding: 14px; font-size: 16px; border-radius: 6px; border: none; cursor: pointer; background-color: #0078d4; color: white; transition: background-color 0.2s, transform 0.05s; }
-    button:hover { background-color: #005a9e; transform: scale(1.01); }
-    #langStatus { margin-left: 8px; color: #888; }
-    #status { margin-top: 16px; text-align: center; font-weight: 500; color: green; }
-  </style>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <!-- Vnější stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-
-<div id="missingBanner" class="lm-banner lm-banner--warn lm-hidden">
-  <div class="lm-banner__title">Dokument nemá nastavenou klasifikaci</div>
-  <div class="lm-banner__desc">Zvolte úroveň klasifikace níže. Po nastavení tento banner zmizí.</div>
-</div>
+  <!-- Banner pro chybějící klasifikaci -->
+  <div id="missingBanner" class="lm-banner lm-hidden">
+    <div class="lm-banner__title">Missing Classification</div>
+    <div class="lm-banner__desc">Please add a classification label to the document.</div>
+  </div>
 
   <h1>LabelMate for Word only</h1>
 
   <div class="row">
-    <label for="langSelect" style="margin-right:8px;">Language:</label>
-    <select id="langSelect">
+    <label for="langSelect" class="label-inline">Language:</label>
+    <select id="langSelect" aria-describedby="langStatus">
       <option value="AUTO">Auto</option>
       <option value="EN">English</option>
       <option value="CZ">Čeština</option>
       <option value="SK">Slovenčina</option>
     </select>
-    <span id="langStatus"></span>
+    <span id="langStatus" class="muted"></span>
   </div>
 
   <div class="row">
     <p>Zvolte úroveň klasifikace:</p>
-    <div id="labelsContainer"></div>
+    <div id="labelsContainer" class="buttons"></div>
   </div>
 
-  <div id="status"></div>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
 
   <!-- Veškerá logika je v externím souboru -->
   <script src="taskpane.js" defer></script>

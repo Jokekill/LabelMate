@@ -35,7 +35,7 @@ button {
 }
 .buttons button:hover,
 button:hover {
-  background-color: #005a9e;
+  background-color: #ea04ff;
   transform: scale(1.01);
 }
 .buttons button:disabled { opacity: 0.6; cursor: default; transform: none; }
@@ -50,7 +50,9 @@ button:hover {
 .status.error{ color: #b00020; }
 
 /* Banner */
-.lm-hidden { display: none !important; }
+.lm-hidden {
+  display: none !important;
+}
 
 .lm-banner {
   position: sticky; /* zůstane nahoře při scrollu */
