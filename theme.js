@@ -55,28 +55,31 @@
   function apply(mode) {
     const html = document.documentElement;
     const isDark = (mode === 'dark');
+    
+    console.log(`Applying theme: ${mode}`);
+    
     html.classList.toggle('dark', isDark);
     html.setAttribute('data-theme', isDark ? 'dark' : 'light');
-    if (!isDark && document.body) {
-      document.body.classList && document.body.classList.remove('dark');
-      document.body.removeAttribute && document.body.removeAttribute('data-theme');
-      hardLightGuard();
-    }
   }
 
   // --- UI wiring (dropdown) ---
   function initUI() {
     const sel = document.getElementById('themeSelect');
-    const stored = getMode();
+    const stored = getMode(); // Získání uloženého motivu z localStorage
+
     if (sel) {
+      // Nastavení výchozí hodnoty dropdownu
       sel.value = stored;
+
+      // Připojení posluchače události `change`
       sel.addEventListener('change', () => {
         const v = sel.value === 'dark' ? 'dark' : 'light';
-        setMode(v);
-        apply(v);
+        setMode(v); // Uložení nového motivu do localStorage
+        apply(v);   // Aplikace nového motivu
       });
     }
-    apply(stored); // pro jistotu po startu
+
+    apply(stored); // Aplikace uloženého motivu při startu
   }
 
   // --- Boot: v Office i mimo Office ---
@@ -94,3 +97,9 @@
 
   // nic nevystavujeme globálně – vše je řízeno zde
 })();
+
+Office.onReady((info) => {
+  if (info.host === Office.HostType.Word) {
+    Theme.initUI(); // Inicializace přepínání motivů
+  }
+});
