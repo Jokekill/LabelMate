@@ -3,28 +3,40 @@
 <head>
   <meta charset="utf-8" />
   <title>LabelMate</title>
+
   <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
   <!-- TailwindCSS (CDN) + dark mode (class) -->
   <script>
+    // správná CDN konfigurace
     tailwind = { config: { darkMode: 'class' } };
+    // nebo: tailwind.config = { darkMode: 'class' };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Předvolba tématu z localStorage ještě před paintem -->
+  <!-- Před-paint: uplatni téma ještě před vykreslením (řeší i Auto -> resolved) -->
   <script>
-    (function(){
-      const t = localStorage.getItem('labelmate_theme') || 'auto';
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (t === 'dark' || (t === 'auto' && prefersDark)) {
-        document.documentElement.classList.add('dark');
+    (function () {
+      var KEY = 'labelmate_theme';
+      var mode = 'auto';
+      try { mode = localStorage.getItem(KEY) || 'auto'; } catch {}
+      var prefersDark = false;
+      try { prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch {}
+
+      var isDark = (mode === 'dark') || (mode === 'auto' && prefersDark);
+      var root = document.documentElement;
+      if (isDark) {
+        root.classList.add('dark');
       } else {
-        document.documentElement.classList.remove('dark');
+        root.classList.remove('dark');
       }
-      document.documentElement.dataset.theme = t;
+      // do data-theme nikdy neukládáme "auto", ale resolved hodnotu
+      root.setAttribute('data-theme', isDark ? 'dark' : 'light');
     })();
   </script>
+
+  <meta name="color-scheme" content="light dark">
 </head>
 <body class="h-full bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
   <div class="max-w-md mx-auto px-5 py-6 space-y-4">
@@ -51,6 +63,7 @@
         <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Theme</label>
         <select id="themeSelect"
                 class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-1">
+          <!-- texty doplní i18n v JS, hodnoty zůstávají -->
           <option value="auto">Auto</option>
           <option value="light">Light</option>
           <option value="dark">Dark</option>

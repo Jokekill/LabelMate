@@ -1,12 +1,12 @@
-// ===== LabelMate – modern UI (Tailwind) + i18n + dark mode =====
+// ===== LabelMate – modern UI (Tailwind) + i18n + robustní theme manager =====
 
 const CC_TAG = "LABELMATE_CLASSIFICATION";
 const CC_TITLE = "Document Classification";
 
-const LS_THEME = "labelmate_theme";
-const LS_LANG  = "labelmate_lang_override";
+const LS_THEME = "labelmate_theme";           // 'auto' | 'light' | 'dark'
+const LS_LANG  = "labelmate_lang_override";   // 'AUTO' | 'EN' | 'CZ' | 'SK'
 
-// --- i18n helpers ---
+// ---------- i18n helpers ----------
 function getSavedLangOverride() {
   try { return localStorage.getItem(LS_LANG) || "AUTO"; } catch { return "AUTO"; }
 }
@@ -14,8 +14,8 @@ function saveLangOverride(v) {
   try { localStorage.setItem(LS_LANG, v); } catch {}
 }
 function langFromOfficeContext() {
-  const content = (Office && Office.context && Office.context.contentLanguage) || "";
-  const display = (Office && Office.context && Office.context.displayLanguage) || "";
+  const content = (typeof Office !== "undefined" && Office.context && Office.context.contentLanguage) || "";
+  const display = (typeof Office !== "undefined" && Office.context && Office.context.displayLanguage) || "";
   const combined = (content || display).toLowerCase();
   if (combined.includes("cs")) return "CZ";
   if (combined.includes("sk")) return "SK";
@@ -32,7 +32,7 @@ function T() {
   return window.LM_I18N[code] || window.LM_I18N[window.LM_DEFAULT_LANG];
 }
 
-// --- status helpers (Tailwind colors via classes) ---
+// ---------- status helpers ----------
 function setStatusOk(msg) {
   const el = document.getElementById("status");
   if (!el) return;
@@ -56,7 +56,7 @@ function setBusy(isBusy) {
   document.querySelectorAll("#labelsContainer button").forEach(b => b.disabled = isBusy);
 }
 
-// --- banner helpers ---
+// ---------- Banner ----------
 function showMissingBanner() {
   const el = document.getElementById("missingBanner");
   if (el) el.classList.remove("hidden");
@@ -106,7 +106,7 @@ function startBannerHeartbeat() {
   }, 4000);
 }
 
-// --- render classification buttons (with tooltip + doc link) ---
+// ---------- Render classification buttons ----------
 function renderLabels() {
   const container = document.getElementById("labelsContainer");
   if (!container) return;
@@ -117,17 +117,15 @@ function renderLabels() {
     const row = document.createElement("div");
     row.className = "flex items-stretch gap-2";
 
-    // Button
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = item.text;
-    btn.title = item.tip; // nativní tooltip
+    btn.title = item.tip;
     btn.className =
       "flex-1 rounded-md bg-sky-600 hover:bg-sky-700 disabled:opacity-60 " +
       "text-white font-semibold px-4 py-3 text-sm transition";
     btn.addEventListener("click", () => applyClassification(item.text));
 
-    // Doc link (i)
     const a = document.createElement("a");
     a.href = item.docUrl;
     a.target = "_blank";
@@ -145,7 +143,7 @@ function renderLabels() {
   });
 }
 
-// --- orphan cleanup (stejné jako dřív) ---
+// ---------- Orphan cleanup ----------
 async function cleanupOrphanLabels(context) {
   const paras = context.document.body.paragraphs;
   paras.load("items");
@@ -173,7 +171,6 @@ async function cleanupOrphanLabels(context) {
   await context.sync();
 }
 function getAllLabelTexts() {
-  // z i18n posbíráme všechny texty napříč jazyky
   const all = new Set();
   Object.values(window.LM_I18N).forEach(lang => {
     lang.labels.forEach(l => all.add(l.text));
@@ -181,7 +178,7 @@ function getAllLabelTexts() {
   return Array.from(all);
 }
 
-// --- main action: insert/replace classification CC ---
+// ---------- Main action ----------
 async function applyClassification(label) {
   if (running) return;
   running = true;
@@ -242,8 +239,10 @@ async function applyClassification(label) {
       if (verify.ok) {
         setStatusOk(L.statusOk(label));
       } else {
-        setStatusError(L.statusErrVerify(label, verify.foundText, verify.reason) +
-          (caughtError?.message ? `\n${caughtError.message}` : ""));
+        setStatusError(
+          L.statusErrVerify(label, verify.foundText, verify.reason) +
+          (caughtError?.message ? `\n${caughtError.message}` : "")
+        );
       }
     } catch (postErr) {
       const L = T();
@@ -280,20 +279,66 @@ async function verifyClassificationSet(expectedLabel) {
   return result;
 }
 
-// --- language + theme UI init ---
+// ---------- Theme manager (Auto/Light/Dark se správným odpojením posluchačů) ----------
+let _themeMql = null;
+function resolveAndApplyTheme(mode) {
+  // pokud jsme dříve poslouchali systém, odpoj to
+  if (_themeMql) {
+    try { _themeMql.removeEventListener('change', onSystemThemeChanged); } catch {}
+    try { _themeMql.removeListener && _themeMql.removeListener(onSystemThemeChanged); } catch {}
+    _themeMql = null;
+  }
+
+  const root = document.documentElement;
+  const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+  let isDark = false;
+
+  if (mode === 'dark') {
+    isDark = true;
+  } else if (mode === 'light') {
+    isDark = false;
+  } else {
+    isDark = !!(mql && mql.matches);
+    // v režimu Auto reaguj na změny systému
+    if (mql) {
+      _themeMql = mql;
+      try { _themeMql.addEventListener('change', onSystemThemeChanged); }
+      catch { _themeMql.addListener && _themeMql.addListener(onSystemThemeChanged); }
+    }
+  }
+
+  root.classList.toggle('dark', isDark);
+  // do data-theme vždy resolved hodnota (nikdy 'auto')
+  root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+}
+function onSystemThemeChanged() {
+  // aplikuj jen pokud jsme stále v Auto
+  const mode = (localStorage.getItem(LS_THEME) || 'auto');
+  if (mode === 'auto') resolveAndApplyTheme('auto');
+}
+
+// ---------- Language + Theme UI init ----------
 function initLanguageUI() {
   const select = document.getElementById("langSelect");
   const status = document.getElementById("langStatus");
   const themeSel = document.getElementById("themeSelect");
 
-  // i18n texty v UI
   function applyStaticTexts() {
     const L = T();
     document.getElementById("appTitle").textContent = L.appTitle;
     document.getElementById("themeLabel").textContent = L.themeLabel;
     document.getElementById("langLabel").textContent = L.langLabel;
     document.getElementById("choosePrompt").textContent = L.choosePrompt;
-    // banner texty doplní showMissingBanner()
+
+    // lokalizace textu voleb motivu (hodnoty zůstávají auto/light/dark)
+    if (themeSel) {
+      const optA = themeSel.querySelector('option[value="auto"]');
+      const optL = themeSel.querySelector('option[value="light"]');
+      const optD = themeSel.querySelector('option[value="dark"]');
+      if (optA) optA.textContent = L.themeOptions.auto;
+      if (optL) optL.textContent = L.themeOptions.light;
+      if (optD) optD.textContent = L.themeOptions.dark;
+    }
   }
 
   // init jazyka
@@ -313,32 +358,32 @@ function initLanguageUI() {
       renderLabels();
       updateMissingBanner().catch(()=>{});
     });
+  } else {
+    applyStaticTexts();
+    renderLabels();
   }
 
   // init theme
   if (themeSel) {
-    const stored = localStorage.getItem(LS_THEME) || 'auto';
+    let stored = 'auto';
+    try { stored = localStorage.getItem(LS_THEME) || 'auto'; } catch {}
     themeSel.value = stored;
-    applyTheme(stored);
+    resolveAndApplyTheme(stored);
+
     themeSel.addEventListener('change', () => {
       const v = themeSel.value;
-      localStorage.setItem(LS_THEME, v);
-      applyTheme(v);
+      try { localStorage.setItem(LS_THEME, v); } catch {}
+      resolveAndApplyTheme(v);
     });
-  }
-}
-function applyTheme(mode) {
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const root = document.documentElement;
-  if (mode === 'dark' || (mode === 'auto' && prefersDark)) {
-    root.classList.add('dark');
   } else {
-    root.classList.remove('dark');
+    // pro jistotu aplikuj i bez selectu
+    let stored = 'auto';
+    try { stored = localStorage.getItem(LS_THEME) || 'auto'; } catch {}
+    resolveAndApplyTheme(stored);
   }
-  root.dataset.theme = mode;
 }
 
-// --- bootstrap ---
+// ---------- bootstrap ----------
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     initLanguageUI();
