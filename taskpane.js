@@ -129,10 +129,12 @@ async function applyClassification(label) {
   clearStatusProcessing();
 
   try {
+    testing_message = ""; // reset testovací zprávy
     await Word.run(async (context) => {
       const found = context.document.contentControls.getByTag(CC_TAG);
       found.load("items");
       await context.sync();
+      testing_message += `Found ${found.items.length} existing Content Controls with tag "${CC_TAG}".\n`;
 
       if (found.items.length > 0) {
         const cc = found.items[0];
@@ -148,7 +150,7 @@ async function applyClassification(label) {
           range.insertText(label, Word.InsertLocation.replace);
           range.font.bold = true;
           range.font.size = 14;
-
+          testing_message += `153 Replaced content in existing CC with label "${label}".\n`;
           // 3) znovu zamknout
           cc.cannotEdit = true;
           cc.cannotDelete = true;
@@ -169,6 +171,7 @@ async function applyClassification(label) {
         // styl textu
         p.font.bold = true;
         p.font.size = 14;
+        testing_message += `174 Inserted new Content Control with label "${label}".\n`;
 
         // zamknout až NAKONEC (po vložení)
         cc.cannotEdit = true;
@@ -177,6 +180,7 @@ async function applyClassification(label) {
         cc.color = "#ff0000";
         await context.sync();
         setStatusOk(`Klasifikace „${label}” byla úspěšně vložena.`);
+        testing_message += `183 CC added and all was waited for \n`;
       }
     });
 
@@ -187,6 +191,7 @@ async function applyClassification(label) {
   } finally {
     setBusy(false);
     running = false;
+    setStatusOk(`Operace dokončena. ${testing_message}`);
   }
 }
 
