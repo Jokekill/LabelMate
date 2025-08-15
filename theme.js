@@ -37,14 +37,18 @@
         body.removeAttribute && body.removeAttribute('data-theme');
       }
     };
+    // okamžitě + krátké okno (cca 2 s), kdyby to jiné skripty zkusily znovu přilepit
     applyLight();
     let ticks = 0;
     const iv = setInterval(() => { ticks++; applyLight(); if (ticks > 20) clearInterval(iv); }, 100);
+
+    // krátce sleduj class na <html> (10 s)
     try {
       if (observer) observer.disconnect();
       observer = new MutationObserver(() => {
         if (getMode() === 'light' && html.classList.contains('dark')) {
-          html.classList.remove('dark'); html.setAttribute('data-theme', 'light');
+          html.classList.remove('dark');
+          html.setAttribute('data-theme', 'light');
         }
       });
       observer.observe(html, { attributes: true, attributeFilter: ['class'] });
@@ -55,31 +59,31 @@
   function apply(mode) {
     const html = document.documentElement;
     const isDark = (mode === 'dark');
-    
-    console.log(`Applying theme: ${mode}`);
-    
     html.classList.toggle('dark', isDark);
     html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+    // “odlepení” .dark z <body> ve světlém režimu
+    if (!isDark && document.body) {
+      document.body.classList && document.body.classList.remove('dark');
+      document.body.removeAttribute && document.body.removeAttribute('data-theme');
+      hardLightGuard();
+    }
   }
 
   // --- UI wiring (dropdown) ---
   function initUI() {
     const sel = document.getElementById('themeSelect');
-    const stored = getMode(); // Získání uloženého motivu z localStorage
+    const stored = getMode();
 
     if (sel) {
-      // Nastavení výchozí hodnoty dropdownu
       sel.value = stored;
-
-      // Připojení posluchače události `change`
       sel.addEventListener('change', () => {
         const v = sel.value === 'dark' ? 'dark' : 'light';
-        setMode(v); // Uložení nového motivu do localStorage
-        apply(v);   // Aplikace nového motivu
+        setMode(v);
+        apply(v);
       });
     }
-
-    apply(stored); // Aplikace uloženého motivu při startu
+    apply(stored); // pro jistotu po startu
   }
 
   // --- Boot: v Office i mimo Office ---
@@ -94,12 +98,4 @@
     }
   }
   boot();
-
-  // nic nevystavujeme globálně – vše je řízeno zde
 })();
-
-Office.onReady((info) => {
-  if (info.host === Office.HostType.Word) {
-    Theme.initUI(); // Inicializace přepínání motivů
-  }
-});
