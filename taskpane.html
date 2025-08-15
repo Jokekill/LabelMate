@@ -7,34 +7,43 @@
   <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-  <!-- TailwindCSS (CDN) + dark mode (class) -->
+  <!-- Tailwind CSS (CDN) – darkMode řízené třídou -->
   <script>
-    // správná CDN konfigurace
-    tailwind = { config: { darkMode: 'class' } };
-    // nebo: tailwind.config = { darkMode: 'class' };
+    window.tailwind = { config: { darkMode: 'class' } };
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Před-paint: uplatni téma ještě před vykreslením (řeší i Auto -> resolved) -->
+  <!-- Před-paint: aplikuj poslední volbu tématu ještě před vykreslením -->
   <script>
     (function () {
-      var KEY = 'labelmate_theme';
+      var KEY = 'labelmate_theme'; // 'auto' | 'light' | 'dark'
       var mode = 'auto';
       try { mode = localStorage.getItem(KEY) || 'auto'; } catch {}
       var prefersDark = false;
       try { prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch {}
-
       var isDark = (mode === 'dark') || (mode === 'auto' && prefersDark);
-      var root = document.documentElement;
-      if (isDark) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-      // do data-theme nikdy neukládáme "auto", ale resolved hodnotu
-      root.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+      var html = document.documentElement;
+      // vyčisti cokoliv, co mohlo zůstat
+      html.classList.remove('dark');
+      html.removeAttribute('data-theme');
+
+      if (isDark) html.classList.add('dark');
+      html.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+      // jistota: body taky odtmavit, kdyby někdo přilepil .dark na <body>
+      document.addEventListener('DOMContentLoaded', function () {
+        document.body && document.body.classList && document.body.classList.remove('dark');
+        document.body && document.body.removeAttribute && document.body.removeAttribute('data-theme');
+      });
     })();
   </script>
+
+  <!-- Přepnutí system UI prvků podle zvoleného data-theme -->
+  <style>
+    :root[data-theme="light"] { color-scheme: light; }
+    :root[data-theme="dark"]  { color-scheme: dark; }
+  </style>
 
   <meta name="color-scheme" content="light dark">
 </head>
@@ -60,10 +69,9 @@
 
       <!-- Theme switch -->
       <div class="flex items-center gap-2">
-        <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Theme</label>
+        <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Motiv</label>
         <select id="themeSelect"
                 class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-1">
-          <!-- texty doplní i18n v JS, hodnoty zůstávají -->
           <option value="auto">Auto</option>
           <option value="light">Light</option>
           <option value="dark">Dark</option>
@@ -73,7 +81,7 @@
 
     <!-- Language -->
     <section class="flex items-center gap-3">
-      <label for="langSelect" class="text-sm opacity-80" id="langLabel">Language</label>
+      <label for="langSelect" class="text-sm opacity-80" id="langLabel">Jazyk</label>
       <select id="langSelect"
               class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-2">
         <option value="AUTO">Auto</option>
@@ -87,10 +95,7 @@
     <!-- Classification -->
     <section class="space-y-2">
       <p class="text-sm font-medium opacity-80" id="choosePrompt">Zvolte úroveň klasifikace:</p>
-
-      <div id="labelsContainer" class="space-y-3">
-        <!-- tlačítka se renderují z JS -->
-      </div>
+      <div id="labelsContainer" class="space-y-3"></div>
     </section>
 
     <!-- Status line -->
@@ -98,9 +103,12 @@
          class="text-sm font-medium text-emerald-600 dark:text-emerald-400"></div>
   </div>
 
-  <!-- Konfigurace i18n -->
+  <!-- Skripty (pořadí je důležité) -->
   <script src="i18n.js"></script>
-  <!-- Logika -->
-  <script src="taskpane.js" defer></script>
+  <script src="core.js"></script>
+  <script src="theme.js"></script>
+  <script src="banner.js"></script>
+  <script src="labels.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
