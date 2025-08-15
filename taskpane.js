@@ -65,10 +65,18 @@ async function hasClassificationCC() {
     found.load("items");
     await context.sync();
 
-    exists = !!(found.items && found.items.length > 0 && !found.items[0].isNullObject);
+    if (found.items && found.items.length > 0 && !found.items[0].isNullObject) {
+      const rng = found.items[0].getRange("Content");
+      rng.load("text");
+      await context.sync();
+      if ((rng.text || "").trim().length > 0) {
+        exists = true;
+      }
+    }
   });
   return exists;
 }
+
 
 /** Zkontroluje dokument a zobrazí/skrýje banner */
 async function updateMissingBanner() {
