@@ -1,11 +1,21 @@
-// ===== theme.js – Light/Dark only (žádné Auto), s pojistkou proti „přilepenému“ dark =====
-
-window.Theme = window.Theme || {};
-
+// ===== theme.js – Light/Dark only, kompletně self-contained =====
 (function () {
   const LS_THEME = "labelmate_theme"; // 'light' | 'dark'
   let observer = null;
 
+  // --- Pre-apply: okamžitě po načtení skriptu, ještě před Tailwindem ---
+  (function preapply() {
+    let v = 'light';
+    try {
+      const s = localStorage.getItem(LS_THEME);
+      if (s === 'dark' || s === 'light') v = s;
+    } catch {}
+    const html = document.documentElement;
+    html.classList.toggle('dark', v === 'dark');
+    html.setAttribute('data-theme', v);
+  })();
+
+  // --- Helpers ---
   function getMode() {
     try {
       const v = localStorage.getItem(LS_THEME);
@@ -19,7 +29,6 @@ window.Theme = window.Theme || {};
   function hardLightGuard() {
     const html = document.documentElement;
     const body = document.body;
-
     const applyLight = () => {
       html.classList.remove('dark');
       html.setAttribute('data-theme', 'light');
@@ -28,22 +37,14 @@ window.Theme = window.Theme || {};
         body.removeAttribute && body.removeAttribute('data-theme');
       }
     };
-
-    // okamžitě + krátké okno (cca 2s), kdyby to jiné skripty zkusily znovu přilepit
     applyLight();
     let ticks = 0;
-    const iv = setInterval(() => {
-      ticks++; applyLight();
-      if (ticks > 20) clearInterval(iv);
-    }, 100);
-
-    // krátce sleduj class na <html> (10s)
+    const iv = setInterval(() => { ticks++; applyLight(); if (ticks > 20) clearInterval(iv); }, 100);
     try {
       if (observer) observer.disconnect();
       observer = new MutationObserver(() => {
         if (getMode() === 'light' && html.classList.contains('dark')) {
-          html.classList.remove('dark');
-          html.setAttribute('data-theme', 'light');
+          html.classList.remove('dark'); html.setAttribute('data-theme', 'light');
         }
       });
       observer.observe(html, { attributes: true, attributeFilter: ['class'] });
@@ -56,7 +57,6 @@ window.Theme = window.Theme || {};
     const isDark = (mode === 'dark');
     html.classList.toggle('dark', isDark);
     html.setAttribute('data-theme', isDark ? 'dark' : 'light');
-
     if (!isDark && document.body) {
       document.body.classList && document.body.classList.remove('dark');
       document.body.removeAttribute && document.body.removeAttribute('data-theme');
@@ -64,10 +64,10 @@ window.Theme = window.Theme || {};
     }
   }
 
+  // --- UI wiring (dropdown) ---
   function initUI() {
     const sel = document.getElementById('themeSelect');
     const stored = getMode();
-
     if (sel) {
       sel.value = stored;
       sel.addEventListener('change', () => {
@@ -76,9 +76,21 @@ window.Theme = window.Theme || {};
         apply(v);
       });
     }
-
-    apply(stored); // aplikuj při startu
+    apply(stored); // pro jistotu po startu
   }
 
-  window.Theme = { getMode, setMode, apply, initUI };
+  // --- Boot: v Office i mimo Office ---
+  function boot() {
+    const start = () => initUI();
+    if (typeof Office !== 'undefined' && Office.onReady) {
+      Office.onReady(() => start());
+    } else if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  }
+  boot();
+
+  // nic nevystavujeme globálně – vše je řízeno zde
 })();

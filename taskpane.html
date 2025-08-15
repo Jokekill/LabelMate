@@ -7,39 +7,12 @@
   <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
+  <!-- Theme (předaplikace motivu ještě před Tailwindem) -->
+  <script src="theme.js"></script>
+
   <!-- Tailwind CSS (CDN) – darkMode řízené třídou -->
-  <script>
-    window.tailwind = { config: { darkMode: 'class' } };
-  </script>
+  <script>window.tailwind = { config: { darkMode: 'class' } };</script>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Před-paint: aplikuj uložený motiv (jen light/dark) ještě před vykreslením -->
-  <script>
-    (function () {
-      var KEY = 'labelmate_theme'; // 'light' | 'dark'
-      var mode = 'light';
-      try {
-        var v = localStorage.getItem(KEY);
-        if (v === 'dark' || v === 'light') mode = v;
-      } catch {}
-      var isDark = (mode === 'dark');
-
-      var html = document.documentElement;
-      html.classList.remove('dark');
-      html.removeAttribute('data-theme');
-
-      if (isDark) html.classList.add('dark');
-      html.setAttribute('data-theme', isDark ? 'dark' : 'light');
-
-      // jistota: body odlepit od .dark, pokud jsme ve světlém režimu
-      document.addEventListener('DOMContentLoaded', function () {
-        if (!isDark && document.body) {
-          document.body.classList && document.body.classList.remove('dark');
-          document.body.removeAttribute && document.body.removeAttribute('data-theme');
-        }
-      });
-    })();
-  </script>
 
   <!-- System UI prvky (select, input) podle zvoleného data-theme -->
   <style>
@@ -65,9 +38,7 @@
 
     <!-- Header -->
     <header class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-sky-600 dark:text-sky-400" id="appTitle">
-        LabelMate for Word
-      </h1>
+      <h1 class="text-2xl font-bold text-sky-600 dark:text-sky-400" id="appTitle">LabelMate for Word</h1>
 
       <!-- Theme switch (jen Light/Dark) -->
       <div class="flex items-center gap-2">
@@ -107,7 +78,6 @@
   <!-- Skripty (pořadí je důležité) -->
   <script src="i18n.js"></script>
   <script src="core.js"></script>
-  <script src="theme.js"></script>
   <script src="banner.js"></script>
   <script src="labels.js"></script>
   <script src="app.js"></script>
