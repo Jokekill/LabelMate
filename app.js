@@ -1,4 +1,4 @@
-// ===== app.js – bootstrap doplňku, jazyk, texty, theme init =====
+// ===== app.js – bootstrap doplňku, jazyk, texty, theme init (bez Auto v motivu) =====
 
 (function () {
   function applyStaticTexts() {
@@ -9,13 +9,11 @@
     byId("langLabel", L.langLabel);
     byId("choosePrompt", L.choosePrompt);
 
-    // lokalizace textu voleb motivu (hodnoty zůstávají auto/light/dark)
+    // lokalizace textu voleb motivu (jen light/dark)
     const themeSel = document.getElementById("themeSelect");
     if (themeSel) {
-      const optA = themeSel.querySelector('option[value="auto"]');
       const optL = themeSel.querySelector('option[value="light"]');
       const optD = themeSel.querySelector('option[value="dark"]');
-      if (optA) optA.textContent = L.themeOptions.auto;
       if (optL) optL.textContent = L.themeOptions.light;
       if (optD) optD.textContent = L.themeOptions.dark;
     }
@@ -47,10 +45,8 @@
 
   Office.onReady((info) => {
     if (info.host === Office.HostType.Word) {
-      // Theme UI
-      window.Theme.initUI();
-      // Language, labels, banner
-      initLanguageUI();
+      window.Theme.initUI();     // Light/Dark
+      initLanguageUI();          // i18n + UI
       window.Banner.startHeartbeat();
     }
   });

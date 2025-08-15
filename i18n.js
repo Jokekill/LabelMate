@@ -1,4 +1,4 @@
-// i18n.js — všechny UI texty + definice klasifikací s tooltipy a odkazy
+// i18n.js — UI texty + definice klasifikací
 window.LM_I18N = {
   EN: {
     appTitle: "LabelMate for Word",
@@ -13,8 +13,7 @@ window.LM_I18N = {
     statusErrVerify: (label, found, why) =>
       `Couldn’t confirm classification “${label}”.` +
       (found ? ` Found: “${found}”.` : "") + (why ? `\nReason: ${why}` : ""),
-    themeOptions: { auto: "Auto", light: "Light", dark: "Dark" },
-    // klasifikační volby: text, tooltip, docUrl
+    themeOptions: { light: "Light", dark: "Dark" },
     labels: [
       { text: "TLP:Internal",           tip: "For internal use only.", docUrl: "https://intra/docs/tlp-internal" },
       { text: "TLP:Protected",          tip: "Contains sensitive info.", docUrl: "https://intra/docs/tlp-protected" },
@@ -35,7 +34,7 @@ window.LM_I18N = {
     statusErrVerify: (label, found, why) =>
       `Nepodařilo se potvrdit nastavení klasifikace „${label}”.` +
       (found ? ` Nalezený text: „${found}”.` : "") + (why ? `\nDůvod: ${why}` : ""),
-    themeOptions: { auto: "Auto", light: "Světlý", dark: "Tmavý" },
+    themeOptions: { light: "Světlý", dark: "Tmavý" },
     labels: [
       { text: "TLP:Interní",          tip: "Interní informace.",                docUrl: "https://intra/docs/tlp-internal-cs" },
       { text: "TLP:Chráněný",         tip: "Citlivé údaje, omezené sdílení.",   docUrl: "https://intra/docs/tlp-protected-cs" },
@@ -56,14 +55,13 @@ window.LM_I18N = {
     statusErrVerify: (label, found, why) =>
       `Nepodarilo sa potvrdiť klasifikáciu „${label}”.` +
       (found ? ` Nájdený text: „${found}”.` : "") + (why ? `\nDôvod: ${why}` : ""),
-    themeOptions: { auto: "Auto", light: "Svetlý", dark: "Tmavý" },
+    themeOptions: { light: "Svetlý", dark: "Tmavý" },
     labels: [
-      { text: "TLP:Interné",          tip: "Interné informácie.",               docUrl: "https://intra/docs/tlp-internal-sk" },
+      { text: "TLP:Interné",          tip: "Interné informácie.",                 docUrl: "https://intra/docs/tlp-internal-sk" },
       { text: "TLP:Chránené",         tip: "Citlivé údaje, obmedzené zdieľanie.", docUrl: "https://intra/docs/tlp-protected-sk" },
-      { text: "TLP:PrísneChránené",   tip: "Vysoko citlivé dáta.",              docUrl: "https://intra/docs/tlp-strict-sk" }
+      { text: "TLP:PrísneChránené",   tip: "Vysoko citlivé dáta.",                docUrl: "https://intra/docs/tlp-strict-sk" }
     ],
   }
 };
 
-// fallback (když AUTO → z Office contextu; i tak ale musíme mít klíč)
 window.LM_DEFAULT_LANG = "EN";

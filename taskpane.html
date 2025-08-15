@@ -13,33 +13,35 @@
   </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Před-paint: aplikuj poslední volbu tématu ještě před vykreslením -->
+  <!-- Před-paint: aplikuj uložený motiv (jen light/dark) ještě před vykreslením -->
   <script>
     (function () {
-      var KEY = 'labelmate_theme'; // 'auto' | 'light' | 'dark'
-      var mode = 'auto';
-      try { mode = localStorage.getItem(KEY) || 'auto'; } catch {}
-      var prefersDark = false;
-      try { prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches; } catch {}
-      var isDark = (mode === 'dark') || (mode === 'auto' && prefersDark);
+      var KEY = 'labelmate_theme'; // 'light' | 'dark'
+      var mode = 'light';
+      try {
+        var v = localStorage.getItem(KEY);
+        if (v === 'dark' || v === 'light') mode = v;
+      } catch {}
+      var isDark = (mode === 'dark');
 
       var html = document.documentElement;
-      // vyčisti cokoliv, co mohlo zůstat
       html.classList.remove('dark');
       html.removeAttribute('data-theme');
 
       if (isDark) html.classList.add('dark');
       html.setAttribute('data-theme', isDark ? 'dark' : 'light');
 
-      // jistota: body taky odtmavit, kdyby někdo přilepil .dark na <body>
+      // jistota: body odlepit od .dark, pokud jsme ve světlém režimu
       document.addEventListener('DOMContentLoaded', function () {
-        document.body && document.body.classList && document.body.classList.remove('dark');
-        document.body && document.body.removeAttribute && document.body.removeAttribute('data-theme');
+        if (!isDark && document.body) {
+          document.body.classList && document.body.classList.remove('dark');
+          document.body.removeAttribute && document.body.removeAttribute('data-theme');
+        }
       });
     })();
   </script>
 
-  <!-- Přepnutí system UI prvků podle zvoleného data-theme -->
+  <!-- System UI prvky (select, input) podle zvoleného data-theme -->
   <style>
     :root[data-theme="light"] { color-scheme: light; }
     :root[data-theme="dark"]  { color-scheme: dark; }
@@ -67,12 +69,11 @@
         LabelMate for Word
       </h1>
 
-      <!-- Theme switch -->
+      <!-- Theme switch (jen Light/Dark) -->
       <div class="flex items-center gap-2">
         <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Motiv</label>
         <select id="themeSelect"
                 class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-1">
-          <option value="auto">Auto</option>
           <option value="light">Light</option>
           <option value="dark">Dark</option>
         </select>
