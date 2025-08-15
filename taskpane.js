@@ -121,37 +121,36 @@ async function cleanupOrphanLabels(context) {
 }
 
 // Vloží / nahradí klasifikaci v jediném Content Controlu
-let running = false; // jednoduchý „mutex“, aby se nespouštělo víckrát najednou
+let running = false;
 async function applyClassification(label) {
   if (running) return;
   running = true;
   setBusy(true);
   clearStatusProcessing();
 
+  let caughtError = null;
+
   try {
-    testing_message = ""; // reset testovací zprávy
     await Word.run(async (context) => {
       const found = context.document.contentControls.getByTag(CC_TAG);
       found.load("items");
       await context.sync();
-      testing_message += `Found ${found.items.length} existing Content Controls with tag "${CC_TAG}".\n`;
 
       if (found.items.length > 0) {
         const cc = found.items[0];
         if (!cc.isNullObject) {
-          // Manipulace s Content Controlem
-          // 1) dočasně odemknout
+          // dočasně odemknout
           cc.cannotEdit = false;
           cc.cannotDelete = false;
           await context.sync();
 
-          // 2) přepsat obsah bezpečně přes range
+          // bezpečná výměna obsahu
           const range = cc.getRange();
           range.insertText(label, Word.InsertLocation.replace);
           range.font.bold = true;
           range.font.size = 14;
-          testing_message += `153 Replaced content in existing CC with label "${label}".\n`;
-          // 3) znovu zamknout
+
+          // znovu zamknout
           cc.cannotEdit = true;
           cc.cannotDelete = true;
           cc.appearance = "BoundingBox";
@@ -159,10 +158,10 @@ async function applyClassification(label) {
           await context.sync();
         }
       } else {
-        // uklidit staré sirotky (OPRAVA uvnitř funkce)
+        // uklidit staré sirotky
         await cleanupOrphanLabels(context);
 
-        // vložit nový CC na začátek
+        // vložit nový odstavec + CC
         const p = context.document.body.insertParagraph(label, Word.InsertLocation.start);
         const cc = p.insertContentControl();
         cc.tag = CC_TAG;
@@ -171,28 +170,72 @@ async function applyClassification(label) {
         // styl textu
         p.font.bold = true;
         p.font.size = 14;
-        testing_message += `174 Inserted new Content Control with label "${label}".\n`;
 
-        // zamknout až NAKONEC (po vložení)
+        // zamknout
         cc.cannotEdit = true;
         cc.cannotDelete = true;
         cc.appearance = "BoundingBox";
         cc.color = "#ff0000";
         await context.sync();
-        setStatusOk(`Klasifikace „${label}” byla úspěšně vložena.`);
-        testing_message += `183 CC added and all was waited for \n`;
       }
     });
-
-    setStatusOk(`Klasifikace „${label}” byla úspěšně vložena. A vše proběhlo ok.`);
-  } catch (error) {
-    console.error(error);
-    // setStatusError(`Nastala chyba při aplikaci klasifikace: ${error?.message || error}`);
+  } catch (err) {
+    console.error(err);
+    caughtError = err;
   } finally {
-    setBusy(false);
-    running = false;
-    setStatusOk(`Operace dokončena. ${testing_message}`);
+    try {
+      // Ověření výsledku – vždy až tady nastavíme status
+      const verify = await verifyClassificationSet(label);
+
+      if (verify.ok) {
+        setStatusOk(`Klasifikace „${label}” byla úspěšně nastavena.`);
+      } else {
+        const errDetail = caughtError?.message ? `\nChyba operace: ${caughtError.message}` : "";
+        const foundInfo = verify.foundText ? ` Nalezený text: „${verify.foundText}”.` : "";
+        setStatusError(
+          `Nepodařilo se potvrdit nastavení klasifikace na „${label}”.${foundInfo}${errDetail}${
+            verify.reason ? `\nDůvod: ${verify.reason}` : ""
+          }`
+        );
+      }
+    } catch (postErr) {
+      // Pokud selže i samotná verifikace
+      const errDetail = caughtError?.message ? `\nChyba operace: ${caughtError.message}` : "";
+      setStatusError(`Nepodařilo se ověřit výsledek klasifikace.${errDetail}\nVerifikační chyba: ${postErr?.message || postErr}`);
+    } finally {
+      setBusy(false);
+      running = false;
+    }
   }
+}
+
+// pomocná verifikace nastaveného CC ===
+async function verifyClassificationSet(expectedLabel) {
+  let result = { ok: false, foundText: "", reason: "" };
+  await Word.run(async (context) => {
+    const found = context.document.contentControls.getByTag(CC_TAG);
+    found.load("items");
+    await context.sync();
+
+    if (!found.items || found.items.length === 0) {
+      result.reason = "Nebyl nalezen žádný Content Control s daným tagem.";
+      return;
+    }
+
+    // Bereme první CC s tagem (podle původní logiky)
+    const cc = found.items[0];
+    const rng = cc.getRange();
+    rng.load("text");
+    await context.sync();
+
+    const txt = (rng.text || "").trim();
+    result.foundText = txt;
+    result.ok = (txt === expectedLabel);
+    if (!result.ok) {
+      result.reason = "Text v CC neodpovídá očekávanému štítku.";
+    }
+  });
+  return result;
 }
 
 // Inicializace UI a jazykové logiky
