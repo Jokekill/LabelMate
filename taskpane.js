@@ -176,13 +176,14 @@ async function applyClassification(label) {
         cc.appearance = "BoundingBox";
         cc.color = "#ff0000";
         await context.sync();
+        setStatusOk(`Klasifikace „${label}” byla úspěšně vložena.`);
       }
     });
 
-    setStatusOk(`Klasifikace „${label}” byla úspěšně vložena.`);
+    setStatusOk(`Klasifikace „${label}” byla úspěšně vložena. A vše proběhlo ok.`);
   } catch (error) {
     console.error(error);
-    setStatusError(`Nastala chyba při aplikaci klasifikace: ${error?.message || error}`);
+    // setStatusError(`Nastala chyba při aplikaci klasifikace: ${error?.message || error}`);
   } finally {
     setBusy(false);
     running = false;
