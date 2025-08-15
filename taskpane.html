@@ -1,43 +1,93 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" class="h-full">
 <head>
   <meta charset="utf-8" />
   <title>LabelMate</title>
-
-  <!-- Office.js z oficiální CDN -->
+  <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-  <!-- Vnější stylesheet -->
-  <link rel="stylesheet" href="styles.css" />
+  <!-- TailwindCSS (CDN) + dark mode (class) -->
+  <script>
+    tailwind = { config: { darkMode: 'class' } };
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Předvolba tématu z localStorage ještě před paintem -->
+  <script>
+    (function(){
+      const t = localStorage.getItem('labelmate_theme') || 'auto';
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (t === 'dark' || (t === 'auto' && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      document.documentElement.dataset.theme = t;
+    })();
+  </script>
 </head>
-<body>
-  <!-- Banner pro chybějící klasifikaci -->
-  <div id="missingBanner" class="lm-banner lm-hidden">
-    <div class="lm-banner__title">Missing Classification</div>
-    <div class="lm-banner__desc">Please add a classification label to the document.</div>
+<body class="h-full bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+  <div class="max-w-md mx-auto px-5 py-6 space-y-4">
+
+    <!-- Banner: chybějící klasifikace -->
+    <div id="missingBanner"
+         class="hidden rounded-lg border-2 border-amber-500/70 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 shadow-sm sticky top-0 z-10">
+      <div class="font-semibold text-amber-700 dark:text-amber-300" id="bnrTitle">
+        Dokument nemá nastavenou klasifikaci
+      </div>
+      <div class="text-sm opacity-90" id="bnrDesc">
+        Zvolte úroveň klasifikace níže. Po nastavení banner zmizí.
+      </div>
+    </div>
+
+    <!-- Header -->
+    <header class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold text-sky-600 dark:text-sky-400" id="appTitle">
+        LabelMate for Word
+      </h1>
+
+      <!-- Theme switch -->
+      <div class="flex items-center gap-2">
+        <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Theme</label>
+        <select id="themeSelect"
+                class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-1">
+          <option value="auto">Auto</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- Language -->
+    <section class="flex items-center gap-3">
+      <label for="langSelect" class="text-sm opacity-80" id="langLabel">Language</label>
+      <select id="langSelect"
+              class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-2">
+        <option value="AUTO">Auto</option>
+        <option value="EN">English</option>
+        <option value="CZ">Čeština</option>
+        <option value="SK">Slovenčina</option>
+      </select>
+      <span id="langStatus" class="text-xs opacity-60"></span>
+    </section>
+
+    <!-- Classification -->
+    <section class="space-y-2">
+      <p class="text-sm font-medium opacity-80" id="choosePrompt">Zvolte úroveň klasifikace:</p>
+
+      <div id="labelsContainer" class="space-y-3">
+        <!-- tlačítka se renderují z JS -->
+      </div>
+    </section>
+
+    <!-- Status line -->
+    <div id="status" role="status" aria-live="polite"
+         class="text-sm font-medium text-emerald-600 dark:text-emerald-400"></div>
   </div>
 
-  <h1>LabelMate for Word only</h1>
-
-  <div class="row">
-    <label for="langSelect" class="label-inline">Language:</label>
-    <select id="langSelect" aria-describedby="langStatus">
-      <option value="AUTO">Auto</option>
-      <option value="EN">English</option>
-      <option value="CZ">Čeština</option>
-      <option value="SK">Slovenčina</option>
-    </select>
-    <span id="langStatus" class="muted"></span>
-  </div>
-
-  <div class="row">
-    <p>Zvolte úroveň klasifikace:</p>
-    <div id="labelsContainer" class="buttons"></div>
-  </div>
-
-  <div id="status" class="status" role="status" aria-live="polite"></div>
-
-  <!-- Veškerá logika je v externím souboru -->
+  <!-- Konfigurace i18n -->
+  <script src="i18n.js"></script>
+  <!-- Logika -->
   <script src="taskpane.js" defer></script>
 </body>
 </html>
