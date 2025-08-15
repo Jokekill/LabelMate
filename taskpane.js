@@ -144,11 +144,15 @@ async function applyClassification(label) {
           cc.cannotDelete = false;
           await context.sync();
 
-          // bezpečná výměna obsahu
-          const range = cc.getRange();
-          range.insertText(label, Word.InsertLocation.replace);
-          range.font.bold = true;
-          range.font.size = 14;
+          // KLÍČOVÁ OPRAVA: upravujeme jen obsah CC, ne celý CC
+          const contentRange = cc.getRange("Content");
+          contentRange.insertText(label, Word.InsertLocation.replace);
+          contentRange.font.bold = true;
+          contentRange.font.size = 14;
+
+          // jistota: tag zůstane správný
+          cc.tag = CC_TAG;
+          cc.title = CC_TITLE;
 
           // znovu zamknout
           cc.cannotEdit = true;
