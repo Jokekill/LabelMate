@@ -11,9 +11,7 @@ const LABEL_SETS = {
 };
 
 // všechny možné texty štítků (kvůli úklidu starých odstavců)
-const ALL_LABEL_TEXTS = [
-  ...LABEL_SETS.EN, ...LABEL_SETS.CZ, ...LABEL_SETS.SK
-];
+const ALL_LABEL_TEXTS = [...LABEL_SETS.EN, ...LABEL_SETS.CZ, ...LABEL_SETS.SK];
 
 // LocalStorage klíč pro ruční volbu jazyka
 const LS_KEY = "labelmate_lang_override";
@@ -24,7 +22,7 @@ function saveLangOverride(v) {
   try { localStorage.setItem(LS_KEY, v); } catch {}
 }
 
-// ===== UI status helpery =====
+// ===== UI helpery (status) =====
 function setStatusOk(msg) {
   const el = document.getElementById("status");
   if (!el) return;
@@ -42,7 +40,6 @@ function setStatusError(msg) {
 function clearStatusProcessing() {
   const el = document.getElementById("status");
   if (!el) return;
-  // „neutral“ stav při startu akce
   el.classList.remove("ok", "error");
   el.textContent = "";
 }
@@ -50,7 +47,52 @@ function setBusy(isBusy) {
   document.querySelectorAll("#labelsContainer button").forEach(b => b.disabled = isBusy);
 }
 
-// Detekce jazyka pouze z Office kontextu
+// ===== Banner helpery =====
+function showMissingBanner() {
+  const el = document.getElementById("missingBanner");
+  if (el) el.classList.remove("lm-hidden");
+}
+function hideMissingBanner() {
+  const el = document.getElementById("missingBanner");
+  if (el) el.classList.add("lm-hidden");
+}
+
+/** Zjistí, zda existuje CC s tagem klasifikace */
+async function hasClassificationCC() {
+  let exists = false;
+  await Word.run(async (context) => {
+    const found = context.document.contentControls.getByTag(CC_TAG);
+    found.load("items");
+    await context.sync();
+
+    exists = !!(found.items && found.items.length > 0 && !found.items[0].isNullObject);
+  });
+  return exists;
+}
+
+/** Zkontroluje dokument a zobrazí/skrýje banner */
+async function updateMissingBanner() {
+  try {
+    const exists = await hasClassificationCC();
+    if (exists) hideMissingBanner(); else showMissingBanner();
+  } catch (e) {
+    // Fail-safe: když kontrola selže, raději banner ukázat
+    showMissingBanner();
+    console.warn("Banner check failed:", e);
+  }
+}
+
+// (volitelně) jemný pravidelný heartbeat pro případ ručního smazání CC
+let _bannerIntervalStarted = false;
+function startBannerHeartbeat() {
+  if (_bannerIntervalStarted) return;
+  _bannerIntervalStarted = true;
+  setInterval(() => {
+    if (!running) updateMissingBanner().catch(() => {});
+  }, 4000);
+}
+
+// ===== Jazyk a vykreslení tlačítek =====
 function langFromOfficeContext() {
   const content = (Office && Office.context && Office.context.contentLanguage) || "";
   const display = (Office && Office.context && Office.context.displayLanguage) || "";
@@ -61,7 +103,6 @@ function langFromOfficeContext() {
   return "EN";
 }
 
-// Vykreslí 3 tlačítka dle jazyka
 function renderLabels(langCode) {
   const container = document.getElementById("labelsContainer");
   if (!container) return;
@@ -77,23 +118,7 @@ function renderLabels(langCode) {
   });
 }
 
-// Bezpečné smazání předchozího klasifikačního CC (pokud existuje)
-async function removeExistingClassificationCC(context) {
-  const existing = context.document.contentControls.getByTag(CC_TAG);
-  existing.load("items");
-  await context.sync();
-  if (existing.items.length > 0) {
-    existing.items.forEach(cc => {
-      if (!cc.isNullObject) {
-        cc.delete(true); // true = smaže i obsah uvnitř
-      }
-    });
-  }
-  await context.sync();
-}
-
-// Bezpečný úklid starých „sirotků“ (odstavce s textem štítku bez CC)
-// OPRAVA: nepřistupujeme na .items bez load; místo toho používáme getFirstOrNullObject()
+// ===== Úklid „sirotků“ – odstavce s textem štítku bez CC =====
 async function cleanupOrphanLabels(context) {
   const paras = context.document.body.paragraphs;
   paras.load("items");
@@ -120,7 +145,7 @@ async function cleanupOrphanLabels(context) {
   await context.sync();
 }
 
-// Vloží / nahradí klasifikaci v jediném Content Controlu
+// ===== Hlavní akce: vloží / nahradí klasifikaci v jediném CC =====
 let running = false;
 async function applyClassification(label) {
   if (running) return;
@@ -144,13 +169,13 @@ async function applyClassification(label) {
           cc.cannotDelete = false;
           await context.sync();
 
-          // KLÍČOVÁ OPRAVA: upravujeme jen obsah CC, ne celý CC
+          // UPRAVUJEME JEN OBSAH CC (ne celý CC)
           const contentRange = cc.getRange("Content");
           contentRange.insertText(label, Word.InsertLocation.replace);
           contentRange.font.bold = true;
           contentRange.font.size = 14;
 
-          // jistota: tag zůstane správný
+          // jistota: tag a title
           cc.tag = CC_TAG;
           cc.title = CC_TITLE;
 
@@ -165,7 +190,7 @@ async function applyClassification(label) {
         // uklidit staré sirotky
         await cleanupOrphanLabels(context);
 
-        // vložit nový odstavec + CC
+        // vložit nový odstavec + CC na začátek
         const p = context.document.body.insertParagraph(label, Word.InsertLocation.start);
         const cc = p.insertContentControl();
         cc.tag = CC_TAG;
@@ -188,7 +213,7 @@ async function applyClassification(label) {
     caughtError = err;
   } finally {
     try {
-      // Ověření výsledku – vždy až tady nastavíme status
+      // Ověření výsledku – status nastavujeme výhradně tady
       const verify = await verifyClassificationSet(label);
 
       if (verify.ok) {
@@ -203,17 +228,18 @@ async function applyClassification(label) {
         );
       }
     } catch (postErr) {
-      // Pokud selže i samotná verifikace
       const errDetail = caughtError?.message ? `\nChyba operace: ${caughtError.message}` : "";
       setStatusError(`Nepodařilo se ověřit výsledek klasifikace.${errDetail}\nVerifikační chyba: ${postErr?.message || postErr}`);
     } finally {
+      // Po každém pokusu překreslit banner (a uvolnit UI)
+      updateMissingBanner().catch(console.warn);
       setBusy(false);
       running = false;
     }
   }
 }
 
-// pomocná verifikace nastaveného CC ===
+// ===== Verifikace obsahu CC =====
 async function verifyClassificationSet(expectedLabel) {
   let result = { ok: false, foundText: "", reason: "" };
   await Word.run(async (context) => {
@@ -226,9 +252,8 @@ async function verifyClassificationSet(expectedLabel) {
       return;
     }
 
-    // Bereme první CC s tagem (podle původní logiky)
     const cc = found.items[0];
-    const rng = cc.getRange();
+    const rng = cc.getRange("Content");
     rng.load("text");
     await context.sync();
 
@@ -242,11 +267,11 @@ async function verifyClassificationSet(expectedLabel) {
   return result;
 }
 
-// Inicializace UI a jazykové logiky
+// ===== Inicializace UI a jazykové logiky =====
 function initLanguageUI() {
   const select = document.getElementById("langSelect");
   const status = document.getElementById("langStatus");
-  if (!select) return; // bezpečnost
+  if (!select) return;
 
   select.value = getSavedLangOverride();
   const effective = (select.value === "AUTO") ? langFromOfficeContext() : select.value;
@@ -262,9 +287,11 @@ function initLanguageUI() {
   });
 }
 
-// Bootstrap – až když je host připraven
+// ===== Bootstrap – až když je host připraven =====
 Office.onReady((info) => {
   if (info.host === Office.HostType.Word) {
     initLanguageUI();
+    updateMissingBanner();   // počáteční kontrola
+    startBannerHeartbeat();  // volitelné: průběžná kontrola
   }
 });

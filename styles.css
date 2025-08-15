@@ -1,0 +1,72 @@
+/* Layout & typography */
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  padding: 30px;
+  background-color: #ffffff;
+  color: #333;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 24px;
+  margin: 0 0 20px 0;
+  color: #0078d4;
+  text-align: center;
+}
+
+.row { margin-bottom: 12px; }
+.label-inline { margin-right: 8px; }
+.muted { margin-left: 8px; color: #888; }
+
+/* Buttons */
+.buttons button,
+button {
+  width: 100%;
+  margin: 8px 0;
+  padding: 14px;
+  font-size: 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background-color: #0078d4;
+  color: #fff;
+  transition: background-color 0.2s, transform 0.05s;
+}
+.buttons button:hover,
+button:hover {
+  background-color: #005a9e;
+  transform: scale(1.01);
+}
+.buttons button:disabled { opacity: 0.6; cursor: default; transform: none; }
+
+/* Status line (OK/ERROR/neutrální) */
+.status {
+  margin-top: 16px;
+  text-align: center;
+  font-weight: 500;
+}
+.status.ok   { color: #138000; }
+.status.error{ color: #b00020; }
+
+/* Banner */
+.lm-hidden { display: none !important; }
+
+.lm-banner {
+  border: 1px solid rgba(255, 165, 0, .4);
+  background: rgba(255, 165, 0, .12);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 8px 0 12px 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.lm-banner--warn {
+  border-color: rgba(255, 99, 71, .45);
+  background: rgba(255, 99, 71, .10);
+}
+.lm-banner__title { font-weight: 600; margin-bottom: 2px; }
+.lm-banner__desc  { opacity: .85; }
+
+/* (Volitelné) jemné vycentrování selectu na menší šířce */
+select { max-width: 160px; }
