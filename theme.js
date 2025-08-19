@@ -1,7 +1,24 @@
 (function () {
-  const STORAGE_KEY = 'lm-theme'; // 'light' | 'dark' | 'system'
+  const STORAGE_KEY = 'lm-theme'; // 'light' | 'dark'
   const root = document.documentElement;
   const listeners = new Set();
+
+  function defaultTheme() {
+    try {
+      return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ? 'dark' : 'light';
+    } catch (_) {
+      return 'light';
+    }
+  }
+
+  function current() {
+    try {
+      return localStorage.getItem(STORAGE_KEY) || defaultTheme();
+    } catch (_) {
+      return defaultTheme();
+    }
+  }
 
   function syncColorSchemeMeta(theme) {
     let meta = document.querySelector('meta[name="color-scheme"]');
@@ -10,70 +27,37 @@
       meta.setAttribute('name', 'color-scheme');
       document.head.appendChild(meta);
     }
-    if (theme === 'light') meta.setAttribute('content', 'light');
-    else if (theme === 'dark') meta.setAttribute('content', 'dark');
-    else meta.setAttribute('content', 'light dark');
-  }
-
-  function prefersDarkOS() {
-    try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; }
-    catch (_) { return false; }
+    // pouze aktivní téma (žádný 'system')
+    meta.setAttribute('content', theme === 'dark' ? 'dark' : 'light');
   }
 
   function apply(theme) {
-    if (theme === 'system' || !theme) {
-      root.removeAttribute('data-theme');
-    } else {
-      root.setAttribute('data-theme', theme);
-    }
+    // theme je vždy 'light' nebo 'dark'
+    root.setAttribute('data-theme', theme);
     syncColorSchemeMeta(theme);
     syncUI(theme);
-    // notifikuj posluchače
     listeners.forEach(fn => { try { fn(theme); } catch (_) {} });
   }
 
-  function current() {
-    try {
-      return localStorage.getItem(STORAGE_KEY) || 'system';
-    } catch (_) {
-      return 'system';
-    }
-  }
-
   function set(theme) {
-    try { localStorage.setItem(STORAGE_KEY, theme); } catch (_) {}
-    apply(theme);
+    const t = theme === 'dark' ? 'dark' : 'light';
+    try { localStorage.setItem(STORAGE_KEY, t); } catch (_) {}
+    apply(t);
   }
 
   function cycle() {
-    const c = current();
-    const next = c === 'light' ? 'dark' : c === 'dark' ? 'system' : 'light';
-    set(next);
+    set(current() === 'dark' ? 'light' : 'dark');
   }
 
   function syncUI(theme) {
-    // Tlačítko
     const btn = document.getElementById('theme-toggle');
     if (btn) {
-      const state = theme === 'light' ? 'Světlý' : theme === 'dark' ? 'Tmavý' : 'Systém';
-      const icon = theme === 'light' ? '☀️' : theme === 'dark' ? '🌙' : '🖥️';
-      const stEl = btn.querySelector('.state');
+      // ikonka = aktuální režim; title/aria zůstává anglicky, aby nebyla závislost na jazyku appky
+      const icon = theme === 'dark' ? '🌙' : '☀️';
       const icEl = btn.querySelector('.icon');
-      if (stEl) stEl.textContent = state;
       if (icEl) icEl.textContent = icon;
-      btn.title = `Motiv: ${state}`;
-    }
-
-    // (Volitelný) select, pokud ho máš někde jinde v UI
-    const sel = document.getElementById('themeSelect');
-    if (sel) {
-      const hasSystem = Array.from(sel.options).some(o => o.value === 'system');
-      if (hasSystem) {
-        sel.value = theme;
-      } else {
-        // Pokud select umí jen 'light' a 'dark', namapuj 'system' na preferenci OS
-        sel.value = theme === 'system' ? (prefersDarkOS() ? 'dark' : 'light') : theme;
-      }
+      btn.title = 'Toggle theme';
+      btn.setAttribute('aria-label', 'Toggle theme');
     }
   }
 
@@ -83,26 +67,10 @@
       btn.addEventListener('click', cycle);
       btn.__lm_bound = true;
     }
-    const sel = document.getElementById('themeSelect');
-    if (sel && !sel.__lm_bound) {
-      sel.addEventListener('change', e => set(e.target.value));
-      sel.__lm_bound = true;
-    }
-  }
-
-  function watchOSChanges() {
-    try {
-      const mq = window.matchMedia('(prefers-color-scheme: dark)');
-      const handler = () => { if (current() === 'system') apply('system'); };
-      if (mq.addEventListener) mq.addEventListener('change', handler);
-      else if (mq.addListener) mq.addListener(handler);
-    } catch (_) {}
   }
 
   function init() {
     apply(current());
-    watchOSChanges();
-    // UI prvky se mohou objevit později — naváž je po DOMContentLoaded
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => { wireUI(); syncUI(current()); });
     } else {
@@ -110,12 +78,11 @@
     }
   }
 
-  // Veřejné API + zpětná kompatibilita (některé části appky očekávaly `Theme`)
+  // veřejné API (zachování kompatibility)
   window.Theme = {
     apply, current, set, cycle, init,
     onChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }
   };
 
-  // Auto-init
   init();
 })();

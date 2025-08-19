@@ -145,41 +145,60 @@ window.Labels = window.Labels || {};
     }
   }
 
-  function renderButtons() {
-    const container = document.getElementById("labelsContainer");
-    if (!container) return;
-    container.innerHTML = "";
+function renderButtons() {
+  const container = document.getElementById("labelsContainer");
+  if (!container) return;
+  container.innerHTML = "";
 
-    const L = window.LM.i18n.T();
-    L.labels.forEach(item => {
-      const row = document.createElement("div");
-      row.className = "flex items-stretch gap-2";
+  const L = window.LM.i18n.T();
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.textContent = item.text;
-      btn.title = item.tip;
-      btn.className =
-        "flex-1 rounded-md bg-sky-600 hover:bg-sky-700 disabled:opacity-60 " +
-        "text-white font-semibold px-4 py-3 text-sm transition";
-      btn.addEventListener("click", () => applyClassification(item.text));
+  L.labels.forEach(item => {
+    // řádek s tlačítkem + info ikonou
+    const row = document.createElement("div");
+    row.className = "row";
+    row.style.alignItems = "stretch";
 
-      const a = document.createElement("a");
-      a.href = item.docUrl;
-      a.target = "_blank";
-      a.rel = "noopener";
-      a.title = L.choosePrompt + " " + item.text;
-      a.className =
-        "shrink-0 rounded-md border border-slate-300 dark:border-slate-700 " +
-        "bg-white dark:bg-slate-800 px-3 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 " +
-        "flex items-center justify-center";
-      a.innerHTML = `<span aria-hidden="true">ℹ️</span>`;
+    // hlavní tlačítko klasifikace
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = item.text;
+    btn.title = item.tip;
+    btn.className = "btn primary";
+    btn.style.flex = "1 1 auto";
+    btn.addEventListener("click", () => window.Labels.applyClassification(item.text));
 
-      row.appendChild(btn);
-      row.appendChild(a);
-      container.appendChild(row);
-    });
-  }
+    // info ikonka + tooltip bublina (hover)
+    const infoWrap = document.createElement("div");
+    infoWrap.className = "has-tooltip";
+    infoWrap.style.flex = "0 0 auto";
+
+    const infoBtn = document.createElement("button");
+    infoBtn.type = "button";
+    infoBtn.className = "btn icon";
+    infoBtn.setAttribute("aria-label", "Info");
+    infoBtn.innerHTML = `<span aria-hidden="true">ℹ️</span>`;
+
+    // krátký lorem + kus jako odkaz do dokumentace
+    const bubble = document.createElement("div");
+    bubble.className = "tooltip-bubble";
+    bubble.innerHTML = `
+      <div>
+        <strong>${item.text}</strong><br>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+        Praesent <a href="${item.docUrl}" target="_blank" rel="noopener">lorem ipsum</a> 
+        vehicula cursus ligula. Curabitur egestas elit non quam feugiat.
+      </div>
+    `;
+
+    infoWrap.appendChild(infoBtn);
+    infoWrap.appendChild(bubble);
+
+    row.appendChild(btn);
+    row.appendChild(infoWrap);
+    container.appendChild(row);
+  });
+}
+
 
   window.Labels = { renderButtons, applyClassification };
 })();

@@ -5,16 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LabelMate</title>
 
-  <!-- Preapply theme before CSS to avoid FOUC -->
+  <!-- Preapply theme (jen 'light' | 'dark'); pokud nic uloženo, zvol OS preferenci -->
   <script>
     (function () {
       try {
-        var t = localStorage.getItem('lm-theme'); // 'light' | 'dark' | 'system' | null
-        if (t && t !== 'system') {
-          document.documentElement.setAttribute('data-theme', t);
-        } else {
-          document.documentElement.removeAttribute('data-theme');
+        var t = localStorage.getItem('lm-theme'); // 'light' | 'dark' | null
+        if (!t) {
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          t = prefersDark ? 'dark' : 'light';
         }
+        document.documentElement.setAttribute('data-theme', t);
       } catch (_) {}
     })();
   </script>
@@ -25,35 +25,30 @@
   <!-- Čisté CSS -->
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Lepší render nativních prvků (měníme dynamicky v theme.js) -->
+  <!-- Nativní prvky – nastavujeme i v theme.js -->
   <meta name="color-scheme" content="light dark">
 
-  <!-- Kompat utilita: některé tvé skripty schovávají/ukazují .hidden -->
   <style>.hidden{display:none!important}</style>
 </head>
 <body>
   <div class="stack" style="max-width: 720px; margin: 0 auto; padding: 20px;">
 
-    <!-- Banner: chybějící klasifikace -->
     <div id="missingBanner" class="banner warning hidden" style="position: sticky; top: 0; z-index: 10;">
       <div id="bnrTitle" class="font-semibold">Dokument nemá nastavenou klasifikaci</div>
       <div id="bnrDesc" class="muted">Zvolte úroveň klasifikace níže. Po nastavení banner zmizí.</div>
     </div>
 
-    <!-- Header -->
     <header class="row" style="justify-content: space-between;">
       <h1 id="appTitle" style="margin: 0;">LabelMate for Word</h1>
 
       <div class="row">
-        <!-- Přepínač motivu – cykluje: Světlý → Tmavý → Systém -->
-        <button id="theme-toggle" class="btn theme-toggle" title="Přepnout motiv">
+        <!-- Ikonkové tlačítko (bez textu) -->
+        <button id="theme-toggle" class="btn theme-toggle" title="Toggle theme" aria-label="Toggle theme">
           <span class="icon" aria-hidden="true">🖥️</span>
-          <span class="state">Systém</span>
         </button>
       </div>
     </header>
 
-    <!-- Jazyk -->
     <section class="row" style="gap: 12px;">
       <label for="langSelect" id="langLabel">Jazyk</label>
       <select id="langSelect" style="max-width: 220px;">
@@ -65,17 +60,15 @@
       <span id="langStatus" class="muted" style="font-size: 12px;"></span>
     </section>
 
-    <!-- Klasifikace -->
     <section class="stack">
       <p id="choosePrompt" style="margin: 0;">Zvolte úroveň klasifikace:</p>
       <div id="labelsContainer" class="stack"></div>
     </section>
 
-    <!-- Stavová linka -->
     <div id="status" role="status" aria-live="polite" class="muted" style="font-weight: 600;"></div>
   </div>
 
-  <!-- Skripty (pořadí zachováno) -->
+  <!-- Skripty -->
   <script src="theme.js"></script>
   <script src="i18n.js"></script>
   <script src="core.js"></script>
