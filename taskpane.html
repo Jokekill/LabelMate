@@ -1,81 +1,82 @@
 <!DOCTYPE html>
-<html lang="cs" class="h-full">
+<html lang="cs">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>LabelMate</title>
+
+  <!-- Preapply theme before CSS to avoid FOUC -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('lm-theme'); // 'light' | 'dark' | 'system' | null
+        if (t && t !== 'system') {
+          document.documentElement.setAttribute('data-theme', t);
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+        }
+      } catch (_) {}
+    })();
+  </script>
 
   <!-- Office.js -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-  <!-- Theme (předaplikace motivu ještě před Tailwindem) -->
-  <script src="theme.js"></script>
+  <!-- Čisté CSS -->
+  <link rel="stylesheet" href="styles.css" />
 
-  <!-- Tailwind CSS (CDN) – darkMode řízené třídou -->
-  <script>window.tailwind = { config: { darkMode: 'class' } };</script>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- System UI prvky (select, input) podle zvoleného data-theme -->
-  <style>
-    :root[data-theme="light"] { color-scheme: light; }
-    :root[data-theme="dark"]  { color-scheme: dark; }
-  </style>
-
+  <!-- Lepší render nativních prvků (měníme dynamicky v theme.js) -->
   <meta name="color-scheme" content="light dark">
+
+  <!-- Kompat utilita: některé tvé skripty schovávají/ukazují .hidden -->
+  <style>.hidden{display:none!important}</style>
 </head>
-<body class="h-full bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
-  <div class="max-w-md mx-auto px-5 py-6 space-y-4">
+<body>
+  <div class="stack" style="max-width: 720px; margin: 0 auto; padding: 20px;">
 
     <!-- Banner: chybějící klasifikace -->
-    <div id="missingBanner"
-         class="hidden rounded-lg border-2 border-amber-500/70 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 shadow-sm sticky top-0 z-10">
-      <div class="font-semibold text-amber-700 dark:text-amber-300" id="bnrTitle">
-        Dokument nemá nastavenou klasifikaci
-      </div>
-      <div class="text-sm opacity-90" id="bnrDesc">
-        Zvolte úroveň klasifikace níže. Po nastavení banner zmizí.
-      </div>
+    <div id="missingBanner" class="banner warning hidden" style="position: sticky; top: 0; z-index: 10;">
+      <div id="bnrTitle" class="font-semibold">Dokument nemá nastavenou klasifikaci</div>
+      <div id="bnrDesc" class="muted">Zvolte úroveň klasifikace níže. Po nastavení banner zmizí.</div>
     </div>
 
     <!-- Header -->
-    <header class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold text-sky-600 dark:text-sky-400" id="appTitle">LabelMate for Word</h1>
+    <header class="row" style="justify-content: space-between;">
+      <h1 id="appTitle" style="margin: 0;">LabelMate for Word</h1>
 
-      <!-- Theme switch (jen Light/Dark) -->
-      <div class="flex items-center gap-2">
-        <label for="themeSelect" class="text-xs opacity-70" id="themeLabel">Motiv</label>
-        <select id="themeSelect"
-                class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-1">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
+      <div class="row">
+        <!-- Přepínač motivu – cykluje: Světlý → Tmavý → Systém -->
+        <button id="theme-toggle" class="btn theme-toggle" title="Přepnout motiv">
+          <span class="icon" aria-hidden="true">🖥️</span>
+          <span class="state">Systém</span>
+        </button>
       </div>
     </header>
 
-    <!-- Language -->
-    <section class="flex items-center gap-3">
-      <label for="langSelect" class="text-sm opacity-80" id="langLabel">Jazyk</label>
-      <select id="langSelect"
-              class="rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm p-2">
+    <!-- Jazyk -->
+    <section class="row" style="gap: 12px;">
+      <label for="langSelect" id="langLabel">Jazyk</label>
+      <select id="langSelect" style="max-width: 220px;">
         <option value="AUTO">Auto</option>
         <option value="EN">English</option>
         <option value="CZ">Čeština</option>
         <option value="SK">Slovenčina</option>
       </select>
-      <span id="langStatus" class="text-xs opacity-60"></span>
+      <span id="langStatus" class="muted" style="font-size: 12px;"></span>
     </section>
 
-    <!-- Classification -->
-    <section class="space-y-2">
-      <p class="text-sm font-medium opacity-80" id="choosePrompt">Zvolte úroveň klasifikace:</p>
-      <div id="labelsContainer" class="space-y-3"></div>
+    <!-- Klasifikace -->
+    <section class="stack">
+      <p id="choosePrompt" style="margin: 0;">Zvolte úroveň klasifikace:</p>
+      <div id="labelsContainer" class="stack"></div>
     </section>
 
-    <!-- Status line -->
-    <div id="status" role="status" aria-live="polite"
-         class="text-sm font-medium text-emerald-600 dark:text-emerald-400"></div>
+    <!-- Stavová linka -->
+    <div id="status" role="status" aria-live="polite" class="muted" style="font-weight: 600;"></div>
   </div>
 
-  <!-- Skripty (pořadí je důležité) -->
+  <!-- Skripty (pořadí zachováno) -->
+  <script src="theme.js"></script>
   <script src="i18n.js"></script>
   <script src="core.js"></script>
   <script src="banner.js"></script>
