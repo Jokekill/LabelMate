@@ -1,0 +1,103 @@
+/* ===== Tlačítka – jednotná velikost a hover ===== */
+button, .btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  min-height: 44px;
+  padding: 12px 18px;
+  border-radius: calc(var(--radius) - 4px);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
+  transition: box-shadow .15s ease, transform .02s ease,
+              background-color .2s ease, color .2s ease, border-color .2s ease;
+}
+button:hover, .btn:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+button:active, .btn:active { transform: translateY(1px); }
+button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shadow-md), var(--focus-ring); }
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-color: transparent;
+}
+.btn.success { border-color: var(--success); color: var(--success); }
+.btn.error   { border-color: var(--danger);  color: var(--danger); }
+.btn.warning { border-color: var(--warning); color: var(--warning); }
+
+.btn.pill  { border-radius: 9999px; }
+
+/* Ikonové tlačítko (info, theme) – čtverec */
+.btn.icon  {
+  width: 40px; min-width: 40px; height: 40px; min-height: 40px;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0;
+  border-radius: 10px;
+}
+
+/* Velká klasifikační tlačítka vlevo */
+.classify-btn {
+  width: 240px;
+  justify-content: center;
+}
+
+/* Přepínač motivu – jen ikonka */
+.theme-toggle { display: inline-flex; align-items: center; }
+
+/* ===== Tooltip – zcela skrytý, zobrazí se jen u info ikony ===== */
+.has-tooltip { position: relative; display: inline-flex; align-items: center; }
+.has-tooltip .tooltip-bubble {
+  position: absolute;
+  display: none;                    /* nic nezabírá v layoutu */
+  left: calc(100% + 12px);          /* bublina vpravo od ikony */
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 10px 12px;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  z-index: 30;
+  pointer-events: auto;
+  line-height: 1.35;
+  font-size: 12.5px;
+}
+.has-tooltip .tooltip-bubble a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.has-tooltip .tooltip-bubble::before,
+.has-tooltip .tooltip-bubble::after {
+  content: "";
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+}
+.has-tooltip .tooltip-bubble::before { border-right-color: var(--border); }
+.has-tooltip .tooltip-bubble::after  { left: -11px; border-right-color: var(--surface); }
+
+/* Zobrazit při hoveru / focusu na ikoně nebo při najetí na bublinu */
+.has-tooltip:hover .tooltip-bubble,
+.has-tooltip:focus-within .tooltip-bubble,
+.has-tooltip .tooltip-bubble:hover {
+  display: block;
+}
+
+/* ===== Fallback pro Tailwind názvy, které přidává JS ke #status ===== */
+/* (Aby fungovalo i bez Tailwindu) */
+.text-emerald-600 { color: var(--success); }
+.text-rose-600    { color: var(--danger); }
+
+/* „dark:“ varianty – Tailwind syntaxi je třeba escapnout (\:) */
+html[data-theme="dark"] .dark\:text-emerald-400 { color: var(--success); }
+html[data-theme="dark"] .dark\:text-rose-400    { color: var(--danger); }

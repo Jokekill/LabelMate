@@ -158,14 +158,14 @@ function renderButtons() {
     row.style.alignItems = "center";
     row.style.gap = "12px";
 
-    // levý sloupek – velké pilulkové tlačítko pro aplikaci klasifikace
+    // velké pilulkové tlačítko pro aplikaci klasifikace
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn primary pill classify-btn";
     btn.textContent = item.text;
     btn.addEventListener("click", () => window.Labels.applyClassification(item.text));
 
-    // info ikonka s tooltipem (bublina je DÍTĚ .has-tooltip a je display:none)
+    // info ikonka + tooltip (skrytý, ukáže se jen při hover/focus)
     const infoWrap = document.createElement("div");
     infoWrap.className = "has-tooltip";
 
@@ -174,7 +174,7 @@ function renderButtons() {
     infoBtn.className = "btn icon";
     infoBtn.setAttribute("aria-label", "Info");
     infoBtn.innerHTML = `<span aria-hidden="true">ℹ️</span>`;
-    infoBtn.tabIndex = 0; // umožní klávesový focus
+    infoBtn.tabIndex = 0;
 
     const bubble = document.createElement("div");
     bubble.className = "tooltip-bubble";
@@ -189,20 +189,12 @@ function renderButtons() {
     infoWrap.appendChild(infoBtn);
     infoWrap.appendChild(bubble);
 
-    // pravý textový popisek (můžeš klidně nechat/odebrat dle potřeby)
-    const right = document.createElement("div");
-    right.style.flex = "1 1 auto";
-    right.innerHTML = `
-      <div style="font-weight:700">${item.text}</div>
-      <div class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit…</div>
-    `;
-
     row.appendChild(btn);
     row.appendChild(infoWrap);
-    row.appendChild(right);
     container.appendChild(row);
   });
 }
+
 
 
   window.Labels = { renderButtons, applyClassification };
