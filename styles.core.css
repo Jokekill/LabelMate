@@ -1,0 +1,81 @@
+/* ===== Základní proměnné (světlý režim) ===== */
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --surface: #f6f7f9;
+  --text: #111827;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+
+  --accent: #2563eb;
+  --accent-contrast: #ffffff;
+
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+
+  --radius: 10px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 2px 8px rgba(0,0,0,.10);
+  --focus-ring: 0 0 0 3px rgba(37,99,235,.35);
+}
+
+/* ===== Tmavý režim přes data atribut ===== */
+html[data-theme="dark"] {
+  --bg: #0b0f16;
+  --surface: #111827;
+  --text: #e5e7eb;
+  --muted: #9ca3af;
+  --border: #1f2937;
+
+  --accent: #60a5fa;
+  --accent-contrast: #0b0f16;
+
+  --success: #34d399;
+  --danger: #f87171;
+  --warning: #fbbf24;
+
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+  --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+}
+
+/* ===== Respektuj OS, pokud není ručně přepnuto ===== */
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --bg: #0b0f16;
+    --surface: #111827;
+    --text: #e5e7eb;
+    --muted: #9ca3af;
+    --border: #1f2937;
+
+    --accent: #60a5fa;
+    --accent-contrast: #0b0f16;
+
+    --success: #34d399;
+    --danger: #f87171;
+    --warning: #fbbf24;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+    --shadow-md: 0 6px 16px rgba(0,0,0,.45);
+  }
+}
+
+/* ===== Základní typografie a layout ===== */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol", sans-serif;
+  line-height: 1.5;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ===== Utility spacing / helpers ===== */
+.row { display: flex; gap: 12px; align-items: center; }
+.stack > * + * { margin-top: 10px; }
+.hidden { display: none !important; }

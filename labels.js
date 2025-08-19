@@ -150,51 +150,56 @@ function renderButtons() {
   if (!container) return;
   container.innerHTML = "";
 
-  const L = window.LM.i18n.T();
+  const L = window.LM?.i18n?.T?.() || { labels: [] };
 
   L.labels.forEach(item => {
-    // řádek s tlačítkem + info ikonou
     const row = document.createElement("div");
     row.className = "row";
-    row.style.alignItems = "stretch";
+    row.style.alignItems = "center";
+    row.style.gap = "12px";
 
-    // hlavní tlačítko klasifikace
+    // levý sloupek – velké pilulkové tlačítko pro aplikaci klasifikace
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.className = "btn primary pill classify-btn";
     btn.textContent = item.text;
-    btn.title = item.tip;
-    btn.className = "btn primary";
-    btn.style.flex = "1 1 auto";
     btn.addEventListener("click", () => window.Labels.applyClassification(item.text));
 
-    // info ikonka + tooltip bublina (hover)
+    // info ikonka s tooltipem (bublina je DÍTĚ .has-tooltip a je display:none)
     const infoWrap = document.createElement("div");
     infoWrap.className = "has-tooltip";
-    infoWrap.style.flex = "0 0 auto";
 
     const infoBtn = document.createElement("button");
     infoBtn.type = "button";
     infoBtn.className = "btn icon";
     infoBtn.setAttribute("aria-label", "Info");
     infoBtn.innerHTML = `<span aria-hidden="true">ℹ️</span>`;
+    infoBtn.tabIndex = 0; // umožní klávesový focus
 
-    // krátký lorem + kus jako odkaz do dokumentace
     const bubble = document.createElement("div");
     bubble.className = "tooltip-bubble";
+    bubble.setAttribute("role", "tooltip");
     bubble.innerHTML = `
-      <div>
-        <strong>${item.text}</strong><br>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
-        Praesent <a href="${item.docUrl}" target="_blank" rel="noopener">lorem ipsum</a> 
-        vehicula cursus ligula. Curabitur egestas elit non quam feugiat.
-      </div>
+      <strong>${item.text}</strong><br>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+      Praesent <a href="${item.docUrl}" target="_blank" rel="noopener">lorem ipsum</a>
+      vehicula cursus ligula. Curabitur egestas elit non quam feugiat.
     `;
 
     infoWrap.appendChild(infoBtn);
     infoWrap.appendChild(bubble);
 
+    // pravý textový popisek (můžeš klidně nechat/odebrat dle potřeby)
+    const right = document.createElement("div");
+    right.style.flex = "1 1 auto";
+    right.innerHTML = `
+      <div style="font-weight:700">${item.text}</div>
+      <div class="muted">Lorem ipsum dolor sit amet, consectetur adipiscing elit…</div>
+    `;
+
     row.appendChild(btn);
     row.appendChild(infoWrap);
+    row.appendChild(right);
     container.appendChild(row);
   });
 }

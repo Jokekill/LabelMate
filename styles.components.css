@@ -1,0 +1,39 @@
+/* ===== Karty, panely, boxy ===== */
+.card, .panel, .box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 14px 16px;
+}
+
+/* ===== Banner ===== */
+.banner {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 12px 14px;
+}
+.banner.success { border-color: var(--success); }
+.banner.error   { border-color: var(--danger); }
+.banner.warning { border-color: var(--warning); }
+
+.muted { color: var(--muted); }
+
+/* ===== Form prvky ===== */
+input, select, textarea {
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 6px);
+  padding: 8px 10px;
+  transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+input::placeholder, textarea::placeholder { color: var(--muted); }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
