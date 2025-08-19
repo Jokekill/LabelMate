@@ -150,24 +150,32 @@ function renderButtons() {
   if (!container) return;
   container.innerHTML = "";
 
-  const L = window.LM?.i18n?.T?.() || { labels: [] };
+  const L = window.LM?.i18n?.T?.() || { labels: [], docLinkText: "More in documentation" };
+
+  // drobný helper pro bezpečné vložení plain textu
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, m =>
+    ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[m])
+  );
 
   L.labels.forEach(item => {
     const row = document.createElement("div");
-    row.className = "row";
+    row.className = "row label-row";
     row.style.alignItems = "center";
     row.style.gap = "12px";
 
-    // velké pilulkové tlačítko pro aplikaci klasifikace
+    // levý blok: tlačítko + „i“ v rohu
+    const wrap = document.createElement("div");
+    wrap.className = "classify-wrap";
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "btn primary pill classify-btn";
     btn.textContent = item.text;
     btn.addEventListener("click", () => window.Labels.applyClassification(item.text));
 
-    // info ikonka + tooltip (skrytý, ukáže se jen při hover/focus)
+    // info ikonka (v rohu tlačítka) + tooltip NAD středem
     const infoWrap = document.createElement("div");
-    infoWrap.className = "has-tooltip";
+    infoWrap.className = "has-tooltip info-in-btn";
 
     const infoBtn = document.createElement("button");
     infoBtn.type = "button";
@@ -179,23 +187,40 @@ function renderButtons() {
     const bubble = document.createElement("div");
     bubble.className = "tooltip-bubble";
     bubble.setAttribute("role", "tooltip");
-    bubble.innerHTML = `
-      <strong>${item.text}</strong><br>
-      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-      Praesent <a href="${item.docUrl}" target="_blank" rel="noopener">lorem ipsum</a>
-      vehicula cursus ligula. Curabitur egestas elit non quam feugiat.
-    `;
+
+    // 1) Preferuj item.helpHtml (lokalizované, může obsahovat <a>)
+    // 2) Fallback: tip + odkaz s lokalizovaným textem
+    let inner;
+    if (item.helpHtml) {
+      inner = item.helpHtml;
+    } else {
+      const tip = esc(item.tip || "");
+      const link = item.docUrl
+        ? ` <a href="${item.docUrl}" target="_blank" rel="noopener">${esc(L.docLinkText)}</a>.`
+        : "";
+      inner = `${tip}${link}`;
+    }
+    bubble.innerHTML = `<strong>${esc(item.text)}</strong><br>${inner}`;
 
     infoWrap.appendChild(infoBtn);
     infoWrap.appendChild(bubble);
 
-    row.appendChild(btn);
-    row.appendChild(infoWrap);
+    wrap.appendChild(btn);
+    wrap.appendChild(infoWrap);
+
+    // pravý popisek (volitelné)
+    const right = document.createElement("div");
+    right.style.flex = "1 1 auto";
+    right.innerHTML = `
+      <div style="font-weight:700">${esc(item.text)}</div>
+      <div class="muted">${esc(item.tip || "")}</div>
+    `;
+
+    row.appendChild(wrap);
+    row.appendChild(right);
     container.appendChild(row);
   });
 }
-
-
 
   window.Labels = { renderButtons, applyClassification };
 })();
