@@ -165,7 +165,7 @@ function renderButtons() {
 
     // levý blok: tlačítko + „i“ v rohu
     const wrap = document.createElement("div");
-    wrap.className = "classify-wrap";
+    wrap.className = "classify-wrap has-tooltip";
 
     const btn = document.createElement("button");
     btn.type = "button";
@@ -175,7 +175,7 @@ function renderButtons() {
 
     // info ikonka (v rohu tlačítka) + tooltip NAD středem
     const infoWrap = document.createElement("div");
-    infoWrap.className = "has-tooltip info-in-btn";
+    infoWrap.className = "info-in-btn";
 
     const infoBtn = document.createElement("button");
     infoBtn.type = "button";
@@ -203,10 +203,10 @@ function renderButtons() {
     bubble.innerHTML = `<strong>${esc(item.text)}</strong><br>${inner}`;
 
     infoWrap.appendChild(infoBtn);
-    infoWrap.appendChild(bubble);
 
     wrap.appendChild(btn);
     wrap.appendChild(infoWrap);
+    wrap.appendChild(bubble);
 
     // pravý popisek (volitelné)
     const right = document.createElement("div");
