@@ -10,8 +10,12 @@ button, .btn {
   cursor: pointer;
   box-shadow: var(--shadow-sm);
   font-weight: 600;
-  transition: box-shadow .15s ease, transform .02s ease,
-              background-color .2s ease, color .2s ease, border-color .2s ease;
+  transition:
+    box-shadow .15s ease,
+    transform .02s ease,
+    background-color .2s ease,
+    color .2s ease,
+    border-color .2s ease;
 }
 
 button:hover, .btn:hover {
@@ -20,8 +24,16 @@ button:hover, .btn:hover {
   border-color: var(--accent);
 }
 
-button:active, .btn:active { transform: translateY(1px); }
-button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shadow-md), var(--focus-ring); }
+button:active,
+.btn:active {
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-md), var(--focus-ring);
+}
 
 .btn.primary {
   background: var(--accent);
@@ -33,38 +45,46 @@ button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shad
 .btn.error   { border-color: var(--danger);  color: var(--danger); }
 .btn.warning { border-color: var(--warning); color: var(--warning); }
 
-.btn.pill { border-radius: 9999px; }
+.btn.pill {
+  border-radius: 9999px;
+}
 
-/* Ikonové tlačítko (info, theme) – menší čtverec */
+/* Ikonové tlačítko – obecný základ */
 .btn.icon {
-  width: 32px; min-width: 32px; height: 32px; min-height: 32px;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   border-radius: 10px;
   font-size: 14px;
   line-height: 1;
 }
 
-/* ---- Label rows (right column removed) ---- */
+/* ---- Label rows ---- */
 .label-row {
   display: block;
 }
 
-/* Wider spacing between label buttons */
-.label-row + .label-row { margin-top: 16px; }
+.label-row + .label-row {
+  margin-top: 16px;
+}
 
 /* ---- Responsive classify button ---- */
 .classify-wrap {
-  position: relative;  /* anchor for info icon + tooltip */
+  position: relative;
   display: block;
   width: 100%;
-  max-width: 520px;    /* feels good in task pane; avoids giant buttons in wide web debugging */
+  max-width: 520px;
 }
 
 .classify-btn {
   width: 100%;
   justify-content: center;
-  padding-right: 52px; /* room for the info icon in the top-right corner */
+  padding-right: 52px;
 }
 
 /* Info icon in the corner of the button */
@@ -75,14 +95,82 @@ button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shad
   z-index: 3;
 }
 
-/* Theme toggle – just an icon */
-.theme-toggle { display: inline-flex; align-items: center; }
+/* Theme toggle */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+}
 
-/* ===== Tooltip bubble =====
-   Behavior:
-   - Preview: hover/focus on icon shows tooltip.
-   - Locked: wrap.tooltip-open shows tooltip (click/tap toggles).
+/* ===== Minimalistická info ikonka =====
+   - decentní vzhled
+   - bez hover efektu
+   - bez zvedání
+   - jen čistý statický vzhled
 */
+.info-btn {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border-radius: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+
+  color: #e5e7eb;
+  font-size: 16px;
+  line-height: 1;
+
+  transform: none;
+  transition: none;
+}
+
+/* ZRUŠENÍ obecného hover/active/focus chování tlačítek pro info icon */
+.info-btn:hover,
+.info-btn:active,
+.info-btn:focus,
+.info-btn:focus-visible {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: none;
+  transform: none;
+  outline: none;
+  color: #e5e7eb;
+}
+
+.info-btn span,
+.info-btn i {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* Light theme varianta */
+html[data-theme="light"] .info-btn {
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: none;
+  color: #334155;
+}
+
+html[data-theme="light"] .info-btn:hover,
+html[data-theme="light"] .info-btn:active,
+html[data-theme="light"] .info-btn:focus,
+html[data-theme="light"] .info-btn:focus-visible {
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: none;
+  transform: none;
+  outline: none;
+  color: #334155;
+}
+
+/* ===== Tooltip bubble ===== */
 .tooltip-bubble {
   position: absolute;
   display: none;
@@ -119,24 +207,25 @@ button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shad
   border: 6px solid transparent;
 }
 
-.tooltip-bubble::before { border-bottom-color: var(--border); }
-.tooltip-bubble::after  {
+.tooltip-bubble::before {
+  border-bottom-color: var(--border);
+}
+
+.tooltip-bubble::after {
   top: calc(100% - 1px);
   border-bottom-color: var(--surface);
 }
 
-/* Show: hover/focus preview on icon (bubble is a sibling placed right after info wrap) */
+/* Show tooltip only */
 .info-in-btn:hover + .tooltip-bubble,
 .info-in-btn:focus-within + .tooltip-bubble {
   display: block;
 }
 
-/* Show: locked open state (click/tap) */
 .classify-wrap.tooltip-open .tooltip-bubble {
   display: block;
 }
 
-/* Keep open while hovering the bubble itself (for mouse users moving icon -> bubble) */
 .tooltip-bubble:hover {
   display: block;
 }
@@ -144,66 +233,6 @@ button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shad
 /* ===== Fallback for Tailwind-like classnames applied by JS to #status ===== */
 .text-emerald-600 { color: var(--success); }
 .text-rose-600    { color: var(--danger); }
+
 html[data-theme="dark"] .dark\:text-emerald-400 { color: var(--success); }
 html[data-theme="dark"] .dark\:text-rose-400    { color: var(--danger); }
-
-
-/* Jemnější info ikonka – vizuálně blíž theme togglu */
-.info-btn {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  padding: 0;
-  border-radius: 10px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: none;
-
-  color: #e5e7eb;
-  font-size: 17px;
-  line-height: 1;
-}
-
-.info-btn:hover {
-  background: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.22);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
-  transform: translateY(-1px);
-}
-
-.info-btn:active {
-  transform: translateY(0);
-}
-
-.info-btn:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 2px rgba(96, 165, 250, 0.35),
-    0 6px 16px rgba(0, 0, 0, 0.28);
-}
-
-.info-btn span,
-.info-btn i {
-  font-size: 17px;
-  line-height: 1;
-}
-
-/* světlejší varianta pro light theme */
-html[data-theme="light"] .info-btn {
-  background: rgba(15, 23, 42, 0.05);
-  border: 1px solid rgba(15, 23, 42, 0.10);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.10);
-  color: #1d4ed8;
-}
-
-html[data-theme="light"] .info-btn:hover {
-  background: rgba(15, 23, 42, 0.08);
-  border-color: rgba(15, 23, 42, 0.16);
-  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14);
-}
