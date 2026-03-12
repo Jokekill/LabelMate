@@ -146,3 +146,64 @@ button:focus-visible, .btn:focus-visible { outline: none; box-shadow: var(--shad
 .text-rose-600    { color: var(--danger); }
 html[data-theme="dark"] .dark\:text-emerald-400 { color: var(--success); }
 html[data-theme="dark"] .dark\:text-rose-400    { color: var(--danger); }
+
+
+/* Jemnější info ikonka – vizuálně blíž theme togglu */
+.info-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 10px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+
+  color: #e5e7eb;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.info-btn:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+
+.info-btn:active {
+  transform: translateY(0);
+}
+
+.info-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(96, 165, 250, 0.35),
+    0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.info-btn span,
+.info-btn i {
+  font-size: 17px;
+  line-height: 1;
+}
+
+/* světlejší varianta pro light theme */
+html[data-theme="light"] .info-btn {
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.10);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.10);
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .info-btn:hover {
+  background: rgba(15, 23, 42, 0.08);
+  border-color: rgba(15, 23, 42, 0.16);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.14);
+}

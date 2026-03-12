@@ -357,6 +357,7 @@ window.Labels = window.Labels || {};
       const infoBtn = document.createElement("button");
       infoBtn.type = "button";
       infoBtn.className = "btn icon info-btn";
+      
       infoBtn.setAttribute("aria-label", "More information");
       infoBtn.setAttribute("aria-expanded", "false");
 
