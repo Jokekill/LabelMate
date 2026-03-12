@@ -1,7 +1,7 @@
 // i18n.js — UI texty + definice klasifikací (s help/helpHtml)
 window.LM_I18N = {
   EN: {
-    appTitle: "LabelMate for Word",
+    appTitle: "LabelMate",
     themeLabel: "Theme",
     langLabel: "Language",
     choosePrompt: "Choose classification level:",
@@ -44,7 +44,7 @@ window.LM_I18N = {
   },
 
   CZ: {
-    appTitle: "LabelMate pro Word",
+    appTitle: "LabelMate",
     themeLabel: "Motiv",
     langLabel: "Jazyk",
     choosePrompt: "Zvolte úroveň klasifikace:",
@@ -87,7 +87,7 @@ window.LM_I18N = {
   },
 
   SK: {
-    appTitle: "LabelMate pre Word",
+    appTitle: "LabelMate",
     themeLabel: "Motív",
     langLabel: "Jazyk",
     choosePrompt: "Zvoľte úroveň klasifikácie:",
