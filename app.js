@@ -1,80 +1,93 @@
-// ===== app.js – add-in bootstrap, language selection, UI text refresh =====
-//
-// Small improvements in this version:
-// - Sets <html lang="..."> based on effective language (accessibility).
-// - Keeps existing behavior (AUTO + manual language override, heartbeat banner).
-
+// app.js
+// Oprava bootstrapu: správné přepínání jazyků, přerender buttonů/tooltipů a bezpečné volání banner API.
 (function () {
+  "use strict";
+
+  function getBannerApi() {
+    return window.Banner || window.LMBanner || null;
+  }
+
   function setDocumentLangAttr(effective) {
-    // Map your internal codes to BCP-47.
     const map = { EN: "en", CZ: "cs", SK: "sk" };
-    const lang = map[effective] || "en";
-    document.documentElement.setAttribute("lang", lang);
+    document.documentElement.setAttribute("lang", map[effective] || "en");
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
   }
 
   function applyStaticTexts() {
-    const L = window.LM.i18n.T();
-    const byId = (id, val) => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = val;
-    };
+    const L = window.LM?.i18n?.T?.();
+    if (!L) return;
 
-    byId("appTitle", L.appTitle);
-    byId("langLabel", L.langLabel);
-    byId("choosePrompt", L.choosePrompt);
+    setText("appTitle", L.appTitle || "LabelMate");
+    setText("langLabel", L.langLabel || "Language");
+    setText("choosePrompt", L.choosePrompt || "Choose classification level:");
+    setText("bnrTitle", L.banner?.title || "");
+    setText("bnrDesc", L.banner?.desc || "");
+  }
+
+  function updateLangStatus(selectedValue) {
+    const status = document.getElementById("langStatus");
+    if (!status) return;
+
+    const L = window.LM?.i18n?.T?.() || {};
+    const effective = selectedValue === "AUTO"
+      ? window.LM.i18n.langFromOfficeContext()
+      : selectedValue;
+
+    status.textContent = selectedValue === "AUTO"
+      ? (typeof L.langStatusAuto === "function" ? L.langStatusAuto(effective) : `Auto: ${effective}`)
+      : (typeof L.langStatusManual === "function" ? L.langStatusManual(effective) : `Manual: ${effective}`);
+  }
+
+  function rerenderUi() {
+    applyStaticTexts();
+    window.Labels?.renderButtons?.();
+    window.dispatchEvent(new CustomEvent("labelmate:rerender-labels"));
+
+    const banner = getBannerApi();
+    if (banner?.refresh) {
+      banner.refresh().catch(() => {});
+    }
   }
 
   function initLanguageUI() {
     const sel = document.getElementById("langSelect");
-    const status = document.getElementById("langStatus");
-    if (!sel) return;
+    if (!sel || !window.LM?.i18n) return;
 
-    sel.value = window.LM.i18n.getSavedLangOverride();
-    const effective = (sel.value === "AUTO")
+    const saved = window.LM.i18n.getSavedLangOverride();
+    sel.value = saved;
+
+    const effective = saved === "AUTO"
       ? window.LM.i18n.langFromOfficeContext()
-      : sel.value;
+      : saved;
 
     setDocumentLangAttr(effective);
-
-    if (status) {
-      status.textContent = (sel.value === "AUTO")
-        ? `Auto: ${effective}`
-        : `Manual: ${effective}`;
-    }
-
-    applyStaticTexts();
-    window.Labels.renderButtons();
-    window.Banner.refresh().catch(() => {});
+    updateLangStatus(saved);
+    rerenderUi();
 
     sel.addEventListener("change", () => {
       const val = sel.value;
       window.LM.i18n.saveLangOverride(val);
 
-      const lang = (val === "AUTO")
+      const lang = val === "AUTO"
         ? window.LM.i18n.langFromOfficeContext()
         : val;
 
       setDocumentLangAttr(lang);
-
-      if (status) {
-        status.textContent = (val === "AUTO")
-          ? `Auto: ${lang}`
-          : `Manual: ${lang}`;
-      }
-
-      applyStaticTexts();
-      window.Labels.renderButtons();
-      window.Banner.refresh().catch(() => {});
+      updateLangStatus(val);
+      rerenderUi();
     });
   }
 
   function boot() {
     initLanguageUI();
-    window.Banner.startHeartbeat();
+    const banner = getBannerApi();
+    banner?.startHeartbeat?.();
   }
 
-  // Run in Office and also outside Office (browser debugging)
-  // Office.onReady returns a Promise / can be called in multiple spots. citeturn8search4
   if (typeof Office !== "undefined" && Office.onReady) {
     Office.onReady(() => boot());
   } else if (document.readyState === "loading") {

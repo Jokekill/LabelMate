@@ -1,10 +1,14 @@
-// i18n.js — UI texty + definice klasifikací (s help/helpHtml)
+// i18n.js
+// Doplnění textů potřebných pro staré Word UI: tooltip aria label a lokalizované statusy AUTO/MANUAL.
 window.LM_I18N = {
   EN: {
     appTitle: "LabelMate",
     themeLabel: "Theme",
     langLabel: "Language",
     choosePrompt: "Choose classification level:",
+    langStatusAuto: (effective) => `Auto: ${effective}`,
+    langStatusManual: (effective) => `Manual: ${effective}`,
+    tooltipMoreInfoAria: "More information",
     banner: {
       title: "No classification set",
       desc: "Choose a classification below. The banner will disappear after it is set."
@@ -12,7 +16,8 @@ window.LM_I18N = {
     statusOk: (label) => `Classification “${label}” was set successfully.`,
     statusErrVerify: (label, found, why) =>
       `Couldn’t confirm classification “${label}”.` +
-      (found ? ` Found: “${found}”.` : "") + (why ? `\nReason: ${why}` : ""),
+      (found ? ` Found: “${found}”.` : "") +
+      (why ? `\nReason: ${why}` : ""),
     themeOptions: { light: "Light", dark: "Dark" },
     docLinkText: "More in documentation",
     labels: [
@@ -40,7 +45,7 @@ window.LM_I18N = {
           "Highly restricted (secrets, credentials, regulated data). Use approved systems, encryption required. " +
           `<a href="https://intra/docs/tlp-strict" target="_blank" rel="noopener">More in documentation</a>.`
       }
-    ],
+    ]
   },
 
   CZ: {
@@ -48,6 +53,9 @@ window.LM_I18N = {
     themeLabel: "Motiv",
     langLabel: "Jazyk",
     choosePrompt: "Zvolte úroveň klasifikace:",
+    langStatusAuto: (effective) => `Auto: ${effective}`,
+    langStatusManual: (effective) => `Ručně: ${effective}`,
+    tooltipMoreInfoAria: "Více informací",
     banner: {
       title: "Dokument nemá nastavenou klasifikaci",
       desc: "Zvolte úroveň klasifikace níže. Po nastavení banner zmizí."
@@ -55,7 +63,8 @@ window.LM_I18N = {
     statusOk: (label) => `Klasifikace „${label}” byla úspěšně nastavena.`,
     statusErrVerify: (label, found, why) =>
       `Nepodařilo se potvrdit nastavení klasifikace „${label}”.` +
-      (found ? ` Nalezený text: „${found}”.` : "") + (why ? `\nDůvod: ${why}` : ""),
+      (found ? ` Nalezený text: „${found}”.` : "") +
+      (why ? `\nDůvod: ${why}` : ""),
     themeOptions: { light: "Světlý", dark: "Tmavý" },
     docLinkText: "Více v dokumentaci",
     labels: [
@@ -83,7 +92,7 @@ window.LM_I18N = {
           "Vysoce citlivé (tajemství, přístupy, regulovaná data). Používejte schválené systémy, vyžadováno šifrování. " +
           `<a href="https://intra/docs/tlp-strict-cs" target="_blank" rel="noopener">Více v dokumentaci</a>.`
       }
-    ],
+    ]
   },
 
   SK: {
@@ -91,6 +100,9 @@ window.LM_I18N = {
     themeLabel: "Motív",
     langLabel: "Jazyk",
     choosePrompt: "Zvoľte úroveň klasifikácie:",
+    langStatusAuto: (effective) => `Auto: ${effective}`,
+    langStatusManual: (effective) => `Ručne: ${effective}`,
+    tooltipMoreInfoAria: "Viac informácií",
     banner: {
       title: "Dokument nemá nastavenú klasifikáciu",
       desc: "Zvoľte klasifikáciu nižšie. Po nastavení banner zmizne."
@@ -98,7 +110,8 @@ window.LM_I18N = {
     statusOk: (label) => `Klasifikácia „${label}” bola úspešne nastavená.`,
     statusErrVerify: (label, found, why) =>
       `Nepodarilo sa potvrdiť klasifikáciu „${label}”.` +
-      (found ? ` Nájdený text: „${found}”.` : "") + (why ? `\nDôvod: ${why}` : ""),
+      (found ? ` Nájdený text: „${found}”.` : "") +
+      (why ? `\nDôvod: ${why}` : ""),
     themeOptions: { light: "Svetlý", dark: "Tmavý" },
     docLinkText: "Viac v dokumentácii",
     labels: [
@@ -126,7 +139,7 @@ window.LM_I18N = {
           "Vysoko citlivé (tajomstvá, prístupy, regulované). Používajte schválené systémy, vyžadované šifrovanie. " +
           `<a href="https://intra/docs/tlp-strict-sk" target="_blank" rel="noopener">Viac v dokumentácii</a>.`
       }
-    ],
+    ]
   }
 };
 
