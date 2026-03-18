@@ -1,7 +1,5 @@
 // classification.powerpoint.js
-// PowerPoint implementation for LabelMate.
-// Goal: keep Word/Excel untouched and apply the classification on slide masters,
-// ideally into an existing footer placeholder, otherwise into a named master text box.
+// Reliable PowerPoint implementation: writes a named footer-like textbox on every slide.
 window.LMPowerPointClassification = (function () {
   "use strict";
 
@@ -9,7 +7,14 @@ window.LMPowerPointClassification = (function () {
   const FALLBACK_SLIDE_WIDTH = 960;
   const FALLBACK_SLIDE_HEIGHT = 540;
   const FONT_COLOR = "#B91C1C";
-  const FONT_SIZE = 14;
+  const FONT_SIZE = 12;
+  const BOX_MARGIN_X = 24;
+  const BOX_HEIGHT = 18;
+  const BOX_BOTTOM_OFFSET = 24;
+
+  function normalizeText(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
 
   function supportsPowerPointApi(version) {
     try {
@@ -19,8 +24,17 @@ window.LMPowerPointClassification = (function () {
     }
   }
 
-  function normalizeText(value) {
-    return String(value || "").replace(/\s+/g, " ").trim();
+  async function ensureReady() {
+    if (window.LM?.classification?.ensureOfficeReady) {
+      await window.LM.classification.ensureOfficeReady();
+      return;
+    }
+
+    if (typeof Office === "undefined" || typeof Office.onReady !== "function") {
+      throw new Error("Office.js is not loaded.");
+    }
+
+    await Office.onReady();
   }
 
   function getAllLabelTexts() {
@@ -29,9 +43,7 @@ window.LMPowerPointClassification = (function () {
 
     Object.values(i18n).forEach((lang) => {
       (lang?.labels || []).forEach((label) => {
-        if (label?.text) {
-          all.add(normalizeText(label.text));
-        }
+        if (label?.text) all.add(normalizeText(label.text));
       });
     });
 
@@ -56,94 +68,61 @@ window.LMPowerPointClassification = (function () {
     };
   }
 
-  function getFallbackFooterBox(size) {
-    return {
-      left: 24,
-      top: Math.max(0, size.height - 28),
-      width: Math.max(240, size.width - 48),
-      height: 20,
-    };
+  function getFooterBox(size) {
+    const width = Math.max(260, (size.width || FALLBACK_SLIDE_WIDTH) - BOX_MARGIN_X * 2);
+    const height = BOX_HEIGHT;
+    const left = BOX_MARGIN_X;
+    const top = Math.max(0, (size.height || FALLBACK_SLIDE_HEIGHT) - BOX_BOTTOM_OFFSET - height);
+
+    return { left, top, width, height };
   }
 
   function applyTextFormatting(shape, label) {
-    const textFrame = shape.textFrame;
-    const textRange = textFrame.textRange;
+    shape.textFrame.textRange.text = label;
 
-    textRange.text = label;
-    textRange.font.bold = true;
-    textRange.font.size = FONT_SIZE;
-    textRange.font.color = FONT_COLOR;
-
-    try { textFrame.leftMargin = 0; } catch (_) {}
-    try { textFrame.rightMargin = 0; } catch (_) {}
-    try { textFrame.topMargin = 0; } catch (_) {}
-    try { textFrame.verticalAlignment = "Bottom"; } catch (_) {}
+    try { shape.textFrame.textRange.font.bold = true; } catch (_) {}
+    try { shape.textFrame.textRange.font.size = FONT_SIZE; } catch (_) {}
+    try { shape.textFrame.textRange.font.color = FONT_COLOR; } catch (_) {}
+    try { shape.textFrame.leftMargin = 0; } catch (_) {}
+    try { shape.textFrame.rightMargin = 0; } catch (_) {}
+    try { shape.textFrame.topMargin = 0; } catch (_) {}
+    try { shape.textFrame.bottomMargin = 0; } catch (_) {}
+    try { shape.textFrame.wordWrap = false; } catch (_) {}
+    try { shape.fill.transparency = 100; } catch (_) {}
+    try { shape.lineFormat.transparency = 100; } catch (_) {}
   }
 
-  async function loadMasterShapes(master) {
-    const shapes = master.shapes;
-    shapes.load("items/name,items/type");
-    await master.context.sync();
-    return shapes.items || [];
+  function loadSlidesAndShapes(context) {
+    const slides = context.presentation.slides;
+    slides.load("items");
+    return slides;
   }
 
-  async function findNamedLabelMateShape(master) {
-    const shapes = await loadMasterShapes(master);
-    return shapes.find((shape) => shape.name === SHAPE_NAME) || null;
+  async function loadShapeNamesForSlides(context, slides) {
+    for (const slide of slides.items) {
+      slide.shapes.load("items/name");
+    }
+    await context.sync();
   }
 
-  async function findFooterPlaceholder(master) {
-    if (!supportsPowerPointApi("1.8")) {
-      return null;
-    }
-
-    const shapes = await loadMasterShapes(master);
-    const placeholderShapes = shapes.filter((shape) => normalizeText(shape.type).toLowerCase() === "placeholder");
-
-    for (const shape of placeholderShapes) {
-      try {
-        shape.placeholderFormat.load("type");
-      } catch (_) {
-        // ignore non-placeholder edge cases
-      }
-    }
-
-    await master.context.sync();
-
-    for (const shape of placeholderShapes) {
-      try {
-        const placeholderType = normalizeText(shape.placeholderFormat.type).toLowerCase();
-        if (placeholderType === "footer") {
-          return shape;
-        }
-      } catch (_) {
-        // ignore shapes that don't expose placeholderFormat properly
-      }
-    }
-
-    return null;
+  function findManagedShape(slide) {
+    return (slide.shapes.items || []).find((shape) => shape.name === SHAPE_NAME) || null;
   }
 
-  async function upsertOnMaster(master, label, slideSize) {
-    const existingNamedShape = await findNamedLabelMateShape(master);
-    if (existingNamedShape) {
-      applyTextFormatting(existingNamedShape, label);
-      return;
+  function ensureShapeOnSlide(slide, label, size) {
+    let shape = findManagedShape(slide);
+    if (!shape) {
+      shape = slide.shapes.addTextBox(label, getFooterBox(size));
+      shape.name = SHAPE_NAME;
     }
 
-    const footerPlaceholder = await findFooterPlaceholder(master);
-    if (footerPlaceholder) {
-      applyTextFormatting(footerPlaceholder, label);
-      return;
-    }
-
-    const box = getFallbackFooterBox(slideSize);
-    const newShape = master.shapes.addTextBox(label, box);
-    newShape.name = SHAPE_NAME;
-    applyTextFormatting(newShape, label);
+    applyTextFormatting(shape, label);
+    return shape;
   }
 
   async function apply(label) {
+    await ensureReady();
+
     const normalizedLabel = normalizeText(label);
     if (!normalizedLabel) {
       throw new Error("Classification label is empty.");
@@ -153,67 +132,89 @@ window.LMPowerPointClassification = (function () {
       throw new Error("PowerPointApi 1.4 is not supported in this client.");
     }
 
+    let updatedCount = 0;
+
     await PowerPoint.run(async (context) => {
-      const slideSize = await getSlideSize(context);
-      const masters = context.presentation.slideMasters;
-      masters.load("items");
+      const size = await getSlideSize(context);
+      const slides = loadSlidesAndShapes(context);
       await context.sync();
 
-      if (!masters.items || masters.items.length === 0) {
-        throw new Error("No slide masters were found in the presentation.");
+      if (!slides.items || slides.items.length === 0) {
+        throw new Error("Presentation has no slides.");
       }
 
-      for (const master of masters.items) {
-        await upsertOnMaster(master, normalizedLabel, slideSize);
+      await loadShapeNamesForSlides(context, slides);
+
+      for (const slide of slides.items) {
+        ensureShapeOnSlide(slide, normalizedLabel, size);
+        updatedCount += 1;
       }
 
       await context.sync();
     });
 
-    return true;
+    if (!updatedCount) {
+      throw new Error("No slide was updated.");
+    }
+
+    return updatedCount;
   }
 
   async function hasClassification() {
+    await ensureReady();
+
     if (!supportsPowerPointApi("1.4")) {
       return false;
     }
 
     const knownLabels = new Set(getAllLabelTexts());
-    let found = false;
+    let allSlidesClassified = true;
 
     await PowerPoint.run(async (context) => {
-      const masters = context.presentation.slideMasters;
-      masters.load("items");
+      const slides = loadSlidesAndShapes(context);
       await context.sync();
 
-      for (const master of masters.items) {
-        const namedShape = await findNamedLabelMateShape(master);
-        if (namedShape) {
-          found = true;
+      if (!slides.items || slides.items.length === 0) {
+        allSlidesClassified = false;
+        return;
+      }
+
+      await loadShapeNamesForSlides(context, slides);
+
+      const managedShapes = [];
+      for (const slide of slides.items) {
+        const shape = findManagedShape(slide);
+        if (!shape) {
+          allSlidesClassified = false;
           return;
         }
 
-        const footerPlaceholder = await findFooterPlaceholder(master);
-        if (!footerPlaceholder) {
-          continue;
+        try {
+          shape.textFrame.load("hasText,textRange/text");
+          managedShapes.push(shape);
+        } catch (_) {
+          allSlidesClassified = false;
+          return;
+        }
+      }
+
+      await context.sync();
+
+      for (const shape of managedShapes) {
+        const text = normalizeText(shape.textFrame?.textRange?.text);
+        if (!text) {
+          allSlidesClassified = false;
+          return;
         }
 
-        try {
-          footerPlaceholder.textFrame.load("hasText,textRange/text");
-          await context.sync();
-
-          const footerText = normalizeText(footerPlaceholder.textFrame.textRange.text);
-          if (footerText && knownLabels.has(footerText)) {
-            found = true;
-            return;
-          }
-        } catch (_) {
-          // ignore placeholder text read failures and continue checking other masters
+        if (knownLabels.size && !knownLabels.has(text)) {
+          allSlidesClassified = false;
+          return;
         }
       }
     });
 
-    return found;
+    return allSlidesClassified;
   }
 
   return {

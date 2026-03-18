@@ -1,25 +1,32 @@
-// taskpane.js — lean orchestrator (bez Tailwindu)
+// taskpane.js — orchestrator
 (function () {
-  function init() {
-    // 1) Téma (světlý/tmavý) – bezpečně, pokud existuje
+  "use strict";
+
+  let started = false;
+
+  async function init() {
+    if (started) return;
+    started = true;
+
+    try {
+      await window.LM?.classification?.ensureOfficeReady?.();
+    } catch (error) {
+      console.error("Office bootstrap failed:", error);
+      return;
+    }
+
     try { window.Theme?.init?.(); } catch (e) { console.warn("Theme.init:", e); }
-
-    // 2) Překlady / statické texty – pokud máš inicializátor v app.js nebo i18n.js
-    try { window.LM?.app?.init?.(); } catch (e) { /* volitelné, nemusí existovat */ }
-
-    // 3) Vyrenderuj klasifikační tlačítka
-    try { window.renderButtons?.(); } catch (e) { console.warn("renderButtons:", e); }
-
-    // 4) Banner „chybí klasifikace“ + heartbeat
-    try { window.updateMissingBanner?.(); } catch (e) { console.warn("updateMissingBanner:", e); }
-    try { window.startBannerHeartbeat?.(); } catch (e) { console.warn("startBannerHeartbeat:", e); }
+    try { window.LM?.app?.init?.(); } catch (e) { console.warn("LM.app.init:", e); }
+    try { window.Labels?.renderButtons?.(); } catch (e) { console.warn("Labels.renderButtons:", e); }
+    try { await window.Banner?.init?.(); } catch (e) { console.warn("Banner.init:", e); }
+    try { window.Banner?.startHeartbeat?.(); } catch (e) { console.warn("Banner.startHeartbeat:", e); }
   }
 
-  if (typeof Office !== "undefined" && Office.onReady) {
-    Office.onReady(() => init());
-  } else if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      init().catch((e) => console.error("Taskpane init failed:", e));
+    }, { once: true });
   } else {
-    init();
+    init().catch((e) => console.error("Taskpane init failed:", e));
   }
 })();

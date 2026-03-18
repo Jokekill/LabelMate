@@ -1,17 +1,16 @@
 // banner.js
-// Sjednocení starého a nového banner API: používá existující DOM v taskpane.html,
-// lokalizuje texty z i18n a vystaví window.Banner i window.LMBanner.
 (function () {
   "use strict";
 
   let heartbeatId = null;
   let refreshInFlight = null;
+  let initStarted = false;
 
   function getElements() {
     return {
       banner: document.getElementById("missingBanner") || document.getElementById("classification-banner"),
       title: document.getElementById("bnrTitle"),
-      desc: document.getElementById("bnrDesc")
+      desc: document.getElementById("bnrDesc"),
     };
   }
 
@@ -19,7 +18,7 @@
     const L = window.LM?.i18n?.T?.() || {};
     return L.banner || {
       title: "No classification set",
-      desc: "Choose a classification below. The banner will disappear after it is set."
+      desc: "Choose a classification below. The banner will disappear after it is set.",
     };
   }
 
@@ -59,6 +58,14 @@
     if (refreshInFlight) return refreshInFlight;
 
     refreshInFlight = (async () => {
+      if (window.LM?.classification?.ensureOfficeReady) {
+        try {
+          await window.LM.classification.ensureOfficeReady();
+        } catch (_) {
+          return;
+        }
+      }
+
       const exists = await hasClassificationSafe();
       if (exists) hide();
       else show();
@@ -84,22 +91,18 @@
     heartbeatId = null;
   }
 
-  function init() {
-    refresh().catch(() => {});
-  }
+  async function init() {
+    if (initStarted) return;
+    initStarted = true;
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
-
-  if (window.Office?.onReady) {
-    Office.onReady(() => {
-      init();
-      window.setTimeout(() => refresh().catch(() => {}), 300);
-      window.setTimeout(() => refresh().catch(() => {}), 1000);
-    });
+    try {
+      if (window.LM?.classification?.ensureOfficeReady) {
+        await window.LM.classification.ensureOfficeReady();
+      }
+      await refresh();
+    } catch (error) {
+      console.warn("Banner init skipped:", error);
+    }
   }
 
   window.addEventListener("labelmate:classification-changed", () => refresh().catch(() => {}));

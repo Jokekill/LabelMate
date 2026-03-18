@@ -1,6 +1,4 @@
 // labels.js
-// Návrat původního Word UI: stejné tlačítkové řádky, tooltipy a chování klik/hover,
-// ale zápis klasifikace jde přes novou host vrstvu window.LM.classification.
 window.Labels = window.Labels || {};
 
 (function () {
@@ -71,7 +69,7 @@ window.Labels = window.Labels || {};
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
-        "'": "&#39;"
+        "'": "&#39;",
       }[m];
     });
   }
@@ -92,12 +90,16 @@ window.Labels = window.Labels || {};
         throw new Error("Classification engine is not available.");
       }
 
-      await window.LM.classification.apply(label);
-      window.LM?.ui?.setStatusOk?.(
-        typeof L.statusOk === "function"
-          ? L.statusOk(label)
-          : `Classification "${label}" was set successfully.`
-      );
+      const result = await window.LM.classification.apply(label);
+      const successMessage = typeof L.statusOk === "function"
+        ? L.statusOk(label)
+        : `Classification "${label}" was set successfully.`;
+
+      if (typeof result === "number" && result > 0) {
+        window.LM?.ui?.setStatusOk?.(`${successMessage} (${result})`);
+      } else {
+        window.LM?.ui?.setStatusOk?.(successMessage);
+      }
     } catch (err) {
       console.error(err);
       const fallback = typeof L.statusErrVerify === "function"
@@ -105,6 +107,12 @@ window.Labels = window.Labels || {};
         : (err?.message || String(err));
       window.LM?.ui?.setStatusError?.(fallback);
     } finally {
+      try {
+        window.dispatchEvent(new CustomEvent("labelmate:classification-changed"));
+      } catch (_) {
+        // ignore custom event issues
+      }
+
       try {
         if (banner?.refresh) {
           await banner.refresh();
@@ -193,10 +201,16 @@ window.Labels = window.Labels || {};
     });
 
     bindTooltipGlobalsOnce();
+
+    try {
+      window.dispatchEvent(new CustomEvent("labelmate:rerender-labels"));
+    } catch (_) {
+      // ignore custom event issues
+    }
   }
 
   window.Labels = {
     renderButtons,
-    applyClassification
+    applyClassification,
   };
 })();
