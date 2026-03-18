@@ -1,4 +1,3 @@
-// classification.host.js
 window.LM = window.LM || {};
 
 (function () {
@@ -18,9 +17,9 @@ window.LM = window.LM || {};
   function getHostFromContext() {
     try {
       return (
+        officeInfoCache?.host ||
         Office?.context?.diagnostics?.host ||
         Office?.context?.host ||
-        officeInfoCache?.host ||
         null
       );
     } catch (_) {
@@ -76,13 +75,11 @@ window.LM = window.LM || {};
         new CustomEvent("labelmate:classification-changed", {
           detail: {
             label,
-            host: getHostFromContext(),
-          },
+            host: getHostFromContext()
+          }
         })
       );
-    } catch (_) {
-      // ignore custom event issues
-    }
+    } catch (_) {}
 
     return result;
   }
@@ -102,6 +99,6 @@ window.LM = window.LM || {};
     apply,
     hasClassification,
     getHost,
-    ensureOfficeReady,
+    ensureOfficeReady
   };
 })();

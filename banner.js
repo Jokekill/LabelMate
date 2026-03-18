@@ -1,16 +1,14 @@
-// banner.js
 (function () {
   "use strict";
 
   let heartbeatId = null;
   let refreshInFlight = null;
-  let initStarted = false;
 
   function getElements() {
     return {
       banner: document.getElementById("missingBanner") || document.getElementById("classification-banner"),
       title: document.getElementById("bnrTitle"),
-      desc: document.getElementById("bnrDesc"),
+      desc: document.getElementById("bnrDesc")
     };
   }
 
@@ -18,7 +16,7 @@
     const L = window.LM?.i18n?.T?.() || {};
     return L.banner || {
       title: "No classification set",
-      desc: "Choose a classification below. The banner will disappear after it is set.",
+      desc: "Choose a classification below. The banner will disappear after it is set."
     };
   }
 
@@ -43,10 +41,14 @@
   }
 
   async function hasClassificationSafe() {
-    const checker = window.LM?.classification?.hasClassification;
-    if (typeof checker !== "function") return false;
+    if (!window.LM?.classification?.ensureOfficeReady) return false;
 
     try {
+      await window.LM.classification.ensureOfficeReady();
+
+      const checker = window.LM?.classification?.hasClassification;
+      if (typeof checker !== "function") return false;
+
       return await checker();
     } catch (error) {
       console.error("LabelMate banner classification check failed:", error);
@@ -58,14 +60,6 @@
     if (refreshInFlight) return refreshInFlight;
 
     refreshInFlight = (async () => {
-      if (window.LM?.classification?.ensureOfficeReady) {
-        try {
-          await window.LM.classification.ensureOfficeReady();
-        } catch (_) {
-          return;
-        }
-      }
-
       const exists = await hasClassificationSafe();
       if (exists) hide();
       else show();
@@ -78,8 +72,13 @@
     }
   }
 
+  async function init() {
+    await refresh();
+  }
+
   function startHeartbeat(intervalMs) {
     if (heartbeatId) return;
+
     heartbeatId = window.setInterval(() => {
       refresh().catch(() => {});
     }, intervalMs || 2500);
@@ -91,28 +90,33 @@
     heartbeatId = null;
   }
 
-  async function init() {
-    if (initStarted) return;
-    initStarted = true;
-
-    try {
-      if (window.LM?.classification?.ensureOfficeReady) {
-        await window.LM.classification.ensureOfficeReady();
-      }
-      await refresh();
-    } catch (error) {
-      console.warn("Banner init skipped:", error);
-    }
-  }
-
-  window.addEventListener("labelmate:classification-changed", () => refresh().catch(() => {}));
-  window.addEventListener("labelmate:rerender-labels", () => refresh().catch(() => {}));
-  window.addEventListener("focus", () => refresh().catch(() => {}));
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) refresh().catch(() => {});
+  window.addEventListener("labelmate:classification-changed", () => {
+    refresh().catch(() => {});
   });
 
-  const api = { init, refresh, show, hide, startHeartbeat, stopHeartbeat };
+  window.addEventListener("labelmate:rerender-labels", () => {
+    refresh().catch(() => {});
+  });
+
+  window.addEventListener("focus", () => {
+    refresh().catch(() => {});
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      refresh().catch(() => {});
+    }
+  });
+
+  const api = {
+    init,
+    refresh,
+    show,
+    hide,
+    startHeartbeat,
+    stopHeartbeat
+  };
+
   window.Banner = api;
   window.LMBanner = api;
   window.refreshBanner = refresh;

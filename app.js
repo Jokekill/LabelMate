@@ -1,7 +1,7 @@
-// app.js
-// Oprava bootstrapu: správné přepínání jazyků, přerender buttonů/tooltipů a bezpečné volání banner API.
 (function () {
   "use strict";
+
+  let started = false;
 
   function getBannerApi() {
     return window.Banner || window.LMBanner || null;
@@ -30,22 +30,30 @@
 
   function updateLangStatus(selectedValue) {
     const status = document.getElementById("langStatus");
-    if (!status) return;
+    if (!status || !window.LM?.i18n) return;
 
-    const L = window.LM?.i18n?.T?.() || {};
+    const L = window.LM.i18n.T?.() || {};
     const effective = selectedValue === "AUTO"
       ? window.LM.i18n.langFromOfficeContext()
       : selectedValue;
 
-    status.textContent = selectedValue === "AUTO"
-      ? (typeof L.langStatusAuto === "function" ? L.langStatusAuto(effective) : `Auto: ${effective}`)
-      : (typeof L.langStatusManual === "function" ? L.langStatusManual(effective) : `Manual: ${effective}`);
+    status.textContent =
+      selectedValue === "AUTO"
+        ? (typeof L.langStatusAuto === "function"
+            ? L.langStatusAuto(effective)
+            : `Auto: ${effective}`)
+        : (typeof L.langStatusManual === "function"
+            ? L.langStatusManual(effective)
+            : `Manual: ${effective}`);
   }
 
   function rerenderUi() {
     applyStaticTexts();
     window.Labels?.renderButtons?.();
-    window.dispatchEvent(new CustomEvent("labelmate:rerender-labels"));
+
+    try {
+      window.dispatchEvent(new CustomEvent("labelmate:rerender-labels"));
+    } catch (_) {}
 
     const banner = getBannerApi();
     if (banner?.refresh) {
@@ -82,17 +90,47 @@
     });
   }
 
-  function boot() {
-    initLanguageUI();
-    const banner = getBannerApi();
-    banner?.startHeartbeat?.();
+  async function boot() {
+    if (started) return;
+    started = true;
+
+    try {
+      window.Theme?.init?.();
+    } catch (e) {
+      console.warn("Theme.init failed:", e);
+    }
+
+    try {
+      await window.LM?.classification?.ensureOfficeReady?.();
+    } catch (e) {
+      console.error("Office bootstrap failed:", e);
+      return;
+    }
+
+    try {
+      initLanguageUI();
+    } catch (e) {
+      console.error("Language UI init failed:", e);
+    }
+
+    try {
+      await getBannerApi()?.init?.();
+    } catch (e) {
+      console.error("Banner init failed:", e);
+    }
+
+    try {
+      getBannerApi()?.startHeartbeat?.();
+    } catch (e) {
+      console.warn("Banner heartbeat failed:", e);
+    }
   }
 
-  if (typeof Office !== "undefined" && Office.onReady) {
-    Office.onReady(() => boot());
-  } else if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", boot);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      boot().catch((e) => console.error("App boot failed:", e));
+    }, { once: true });
   } else {
-    boot();
+    boot().catch((e) => console.error("App boot failed:", e));
   }
 })();

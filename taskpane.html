@@ -18,6 +18,7 @@
     })();
   </script>
 
+  <!-- DŮLEŽITÉ: office.js pouze jednou -->
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
   <link rel="stylesheet" href="styles.core.css" />
@@ -25,10 +26,13 @@
   <link rel="stylesheet" href="styles.ui.css" />
 
   <meta name="color-scheme" content="light dark" />
-  <style>.hidden{display:none!important}</style>
+  <style>
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
   <div class="stack" style="max-width: 720px; margin: 0 auto; padding: 20px;">
+
     <div id="missingBanner" class="banner warning hidden" style="position: sticky; top: 0; z-index: 10;">
       <div id="bnrTitle" class="font-semibold">Dokument nemá nastavenou klasifikaci</div>
       <div id="bnrDesc" class="muted">Zvolte úroveň klasifikace níže. Po nastavení banner zmizí.</div>
@@ -36,6 +40,7 @@
 
     <header class="row" style="justify-content: space-between;">
       <h1 id="appTitle" style="margin: 0;">LabelMate</h1>
+
       <div class="row">
         <button id="theme-toggle" class="btn icon theme-toggle" title="Toggle theme" aria-label="Toggle theme">
           <span class="icon" aria-hidden="true">🖥️</span>
@@ -74,6 +79,5 @@
   <script src="banner.js"></script>
   <script src="labels.js"></script>
   <script src="app.js"></script>
-  <script src="taskpane.js"></script>
 </body>
 </html>

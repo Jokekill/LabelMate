@@ -1,5 +1,3 @@
-// classification.powerpoint.js
-// Reliable PowerPoint implementation: writes a named footer-like textbox on every slide.
 window.LMPowerPointClassification = (function () {
   "use strict";
 
@@ -43,7 +41,9 @@ window.LMPowerPointClassification = (function () {
 
     Object.values(i18n).forEach((lang) => {
       (lang?.labels || []).forEach((label) => {
-        if (label?.text) all.add(normalizeText(label.text));
+        if (label?.text) {
+          all.add(normalizeText(label.text));
+        }
       });
     });
 
@@ -54,7 +54,7 @@ window.LMPowerPointClassification = (function () {
     if (!supportsPowerPointApi("1.10")) {
       return {
         width: FALLBACK_SLIDE_WIDTH,
-        height: FALLBACK_SLIDE_HEIGHT,
+        height: FALLBACK_SLIDE_HEIGHT
       };
     }
 
@@ -64,7 +64,7 @@ window.LMPowerPointClassification = (function () {
 
     return {
       width: pageSetup.slideWidth || FALLBACK_SLIDE_WIDTH,
-      height: pageSetup.slideHeight || FALLBACK_SLIDE_HEIGHT,
+      height: pageSetup.slideHeight || FALLBACK_SLIDE_HEIGHT
     };
   }
 
@@ -83,16 +83,18 @@ window.LMPowerPointClassification = (function () {
     try { shape.textFrame.textRange.font.bold = true; } catch (_) {}
     try { shape.textFrame.textRange.font.size = FONT_SIZE; } catch (_) {}
     try { shape.textFrame.textRange.font.color = FONT_COLOR; } catch (_) {}
+
     try { shape.textFrame.leftMargin = 0; } catch (_) {}
     try { shape.textFrame.rightMargin = 0; } catch (_) {}
     try { shape.textFrame.topMargin = 0; } catch (_) {}
     try { shape.textFrame.bottomMargin = 0; } catch (_) {}
     try { shape.textFrame.wordWrap = false; } catch (_) {}
+
     try { shape.fill.transparency = 100; } catch (_) {}
     try { shape.lineFormat.transparency = 100; } catch (_) {}
   }
 
-  function loadSlidesAndShapes(context) {
+  function loadSlides(context) {
     const slides = context.presentation.slides;
     slides.load("items");
     return slides;
@@ -111,6 +113,7 @@ window.LMPowerPointClassification = (function () {
 
   function ensureShapeOnSlide(slide, label, size) {
     let shape = findManagedShape(slide);
+
     if (!shape) {
       shape = slide.shapes.addTextBox(label, getFooterBox(size));
       shape.name = SHAPE_NAME;
@@ -136,7 +139,7 @@ window.LMPowerPointClassification = (function () {
 
     await PowerPoint.run(async (context) => {
       const size = await getSlideSize(context);
-      const slides = loadSlidesAndShapes(context);
+      const slides = loadSlides(context);
       await context.sync();
 
       if (!slides.items || slides.items.length === 0) {
@@ -171,7 +174,7 @@ window.LMPowerPointClassification = (function () {
     let allSlidesClassified = true;
 
     await PowerPoint.run(async (context) => {
-      const slides = loadSlidesAndShapes(context);
+      const slides = loadSlides(context);
       await context.sync();
 
       if (!slides.items || slides.items.length === 0) {
@@ -182,6 +185,7 @@ window.LMPowerPointClassification = (function () {
       await loadShapeNamesForSlides(context, slides);
 
       const managedShapes = [];
+
       for (const slide of slides.items) {
         const shape = findManagedShape(slide);
         if (!shape) {
@@ -223,7 +227,7 @@ window.LMPowerPointClassification = (function () {
     constants: {
       SHAPE_NAME,
       FONT_COLOR,
-      FONT_SIZE,
-    },
+      FONT_SIZE
+    }
   };
 })();
