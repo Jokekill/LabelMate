@@ -1,8 +1,4 @@
 // classification.powerpoint.js
-// PowerPoint implementation for LabelMate.
-// Writes classification textbox to EVERY slide.
-// Safe against duplicate-name collisions across slides and old broken state.
-
 window.LMPowerPointClassification = (function () {
   "use strict";
 
@@ -69,10 +65,16 @@ window.LMPowerPointClassification = (function () {
   }
 
   function getFooterBox(slideSize) {
-    const width = Math.max(220, (slideSize.width || FALLBACK_SLIDE_WIDTH) - BOX_LEFT - BOX_RIGHT_MARGIN);
+    const width = Math.max(
+      220,
+      (slideSize.width || FALLBACK_SLIDE_WIDTH) - BOX_LEFT - BOX_RIGHT_MARGIN
+    );
     const height = BOX_HEIGHT;
     const left = BOX_LEFT;
-    const top = Math.max(0, (slideSize.height || FALLBACK_SLIDE_HEIGHT) - BOX_BOTTOM_MARGIN - height);
+    const top = Math.max(
+      0,
+      (slideSize.height || FALLBACK_SLIDE_HEIGHT) - BOX_BOTTOM_MARGIN - height
+    );
 
     return { left, top, width, height };
   }
@@ -102,19 +104,9 @@ window.LMPowerPointClassification = (function () {
     try { textFrame.bottomMargin = 0; } catch (_) {}
     try { textFrame.wordWrap = false; } catch (_) {}
 
-    // Optional cosmetic cleanup. Ignore if host rejects any of this.
+    // Bezpečnější než transparency = 100
     try { shape.fill.clear(); } catch (_) {}
-    try { shape.lineFormat.transparency = 1; } catch (_) {}
-  }
-
-  function findManagedShape(slide) {
-    const items = slide.shapes?.items || [];
-    for (const shape of items) {
-      if (isManagedShapeName(shape.name)) {
-        return shape;
-      }
-    }
-    return null;
+    try { shape.lineFormat.visible = false; } catch (_) {}
   }
 
   async function loadSlidesAndShapeNames(context) {
@@ -134,6 +126,16 @@ window.LMPowerPointClassification = (function () {
     return slides;
   }
 
+  function findManagedShape(slide) {
+    const items = slide.shapes?.items || [];
+    for (const shape of items) {
+      if (isManagedShapeName(shape.name)) {
+        return shape;
+      }
+    }
+    return null;
+  }
+
   function upsertOnSlide(slide, slideIndex, label, slideSize) {
     const existing = findManagedShape(slide);
     const box = getFooterBox(slideSize);
@@ -142,14 +144,13 @@ window.LMPowerPointClassification = (function () {
     if (!shape) {
       shape = slide.shapes.addTextBox(label, box);
     } else {
-      // Reposition in case theme/layout changed.
       try { shape.left = box.left; } catch (_) {}
       try { shape.top = box.top; } catch (_) {}
       try { shape.width = box.width; } catch (_) {}
       try { shape.height = box.height; } catch (_) {}
     }
 
-    // Name per slide to avoid collisions.
+    // Unikátní jméno per slide
     try { shape.name = getShapeNameForSlide(slideIndex); } catch (_) {}
 
     applyTextFormatting(shape, label);
