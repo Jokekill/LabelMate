@@ -1,14 +1,22 @@
+// classification.powerpoint.js
+// PowerPoint implementation for LabelMate.
+// Writes classification textbox to EVERY slide.
+// Safe against duplicate-name collisions across slides and old broken state.
+
 window.LMPowerPointClassification = (function () {
   "use strict";
 
-  const SHAPE_NAME = "LABELMATE_CLASSIFICATION_FOOTER";
+  const SHAPE_NAME_PREFIX = "LABELMATE_CLASSIFICATION_FOOTER";
   const FALLBACK_SLIDE_WIDTH = 960;
   const FALLBACK_SLIDE_HEIGHT = 540;
+
   const FONT_COLOR = "#B91C1C";
   const FONT_SIZE = 12;
-  const BOX_MARGIN_X = 24;
+
+  const BOX_LEFT = 24;
   const BOX_HEIGHT = 18;
-  const BOX_BOTTOM_OFFSET = 24;
+  const BOX_BOTTOM_MARGIN = 20;
+  const BOX_RIGHT_MARGIN = 24;
 
   function normalizeText(value) {
     return String(value || "").replace(/\s+/g, " ").trim();
@@ -35,21 +43,6 @@ window.LMPowerPointClassification = (function () {
     await Office.onReady();
   }
 
-  function getAllLabelTexts() {
-    const all = new Set();
-    const i18n = window.LM_I18N || {};
-
-    Object.values(i18n).forEach((lang) => {
-      (lang?.labels || []).forEach((label) => {
-        if (label?.text) {
-          all.add(normalizeText(label.text));
-        }
-      });
-    });
-
-    return Array.from(all);
-  }
-
   async function getSlideSize(context) {
     if (!supportsPowerPointApi("1.10")) {
       return {
@@ -58,69 +51,109 @@ window.LMPowerPointClassification = (function () {
       };
     }
 
-    const pageSetup = context.presentation.pageSetup;
-    pageSetup.load("slideWidth,slideHeight");
-    await context.sync();
+    try {
+      const pageSetup = context.presentation.pageSetup;
+      pageSetup.load("slideWidth,slideHeight");
+      await context.sync();
 
-    return {
-      width: pageSetup.slideWidth || FALLBACK_SLIDE_WIDTH,
-      height: pageSetup.slideHeight || FALLBACK_SLIDE_HEIGHT
-    };
+      return {
+        width: pageSetup.slideWidth || FALLBACK_SLIDE_WIDTH,
+        height: pageSetup.slideHeight || FALLBACK_SLIDE_HEIGHT
+      };
+    } catch (_) {
+      return {
+        width: FALLBACK_SLIDE_WIDTH,
+        height: FALLBACK_SLIDE_HEIGHT
+      };
+    }
   }
 
-  function getFooterBox(size) {
-    const width = Math.max(260, (size.width || FALLBACK_SLIDE_WIDTH) - BOX_MARGIN_X * 2);
+  function getFooterBox(slideSize) {
+    const width = Math.max(220, (slideSize.width || FALLBACK_SLIDE_WIDTH) - BOX_LEFT - BOX_RIGHT_MARGIN);
     const height = BOX_HEIGHT;
-    const left = BOX_MARGIN_X;
-    const top = Math.max(0, (size.height || FALLBACK_SLIDE_HEIGHT) - BOX_BOTTOM_OFFSET - height);
+    const left = BOX_LEFT;
+    const top = Math.max(0, (slideSize.height || FALLBACK_SLIDE_HEIGHT) - BOX_BOTTOM_MARGIN - height);
 
     return { left, top, width, height };
   }
 
-  function applyTextFormatting(shape, label) {
-    shape.textFrame.textRange.text = label;
-
-    try { shape.textFrame.textRange.font.bold = true; } catch (_) {}
-    try { shape.textFrame.textRange.font.size = FONT_SIZE; } catch (_) {}
-    try { shape.textFrame.textRange.font.color = FONT_COLOR; } catch (_) {}
-
-    try { shape.textFrame.leftMargin = 0; } catch (_) {}
-    try { shape.textFrame.rightMargin = 0; } catch (_) {}
-    try { shape.textFrame.topMargin = 0; } catch (_) {}
-    try { shape.textFrame.bottomMargin = 0; } catch (_) {}
-    try { shape.textFrame.wordWrap = false; } catch (_) {}
-
-    try { shape.fill.transparency = 100; } catch (_) {}
-    try { shape.lineFormat.transparency = 100; } catch (_) {}
+  function getShapeNameForSlide(index) {
+    return `${SHAPE_NAME_PREFIX}_${index + 1}`;
   }
 
-  function loadSlides(context) {
+  function isManagedShapeName(name) {
+    const n = normalizeText(name);
+    return n === SHAPE_NAME_PREFIX || n.startsWith(`${SHAPE_NAME_PREFIX}_`);
+  }
+
+  function applyTextFormatting(shape, label) {
+    const textFrame = shape.textFrame;
+    const textRange = textFrame.textRange;
+
+    textRange.text = label;
+
+    try { textRange.font.bold = true; } catch (_) {}
+    try { textRange.font.size = FONT_SIZE; } catch (_) {}
+    try { textRange.font.color = FONT_COLOR; } catch (_) {}
+
+    try { textFrame.leftMargin = 0; } catch (_) {}
+    try { textFrame.rightMargin = 0; } catch (_) {}
+    try { textFrame.topMargin = 0; } catch (_) {}
+    try { textFrame.bottomMargin = 0; } catch (_) {}
+    try { textFrame.wordWrap = false; } catch (_) {}
+
+    // Optional cosmetic cleanup. Ignore if host rejects any of this.
+    try { shape.fill.clear(); } catch (_) {}
+    try { shape.lineFormat.transparency = 1; } catch (_) {}
+  }
+
+  function findManagedShape(slide) {
+    const items = slide.shapes?.items || [];
+    for (const shape of items) {
+      if (isManagedShapeName(shape.name)) {
+        return shape;
+      }
+    }
+    return null;
+  }
+
+  async function loadSlidesAndShapeNames(context) {
     const slides = context.presentation.slides;
     slides.load("items");
-    return slides;
-  }
+    await context.sync();
 
-  async function loadShapeNamesForSlides(context, slides) {
+    if (!slides.items || slides.items.length === 0) {
+      return slides;
+    }
+
     for (const slide of slides.items) {
       slide.shapes.load("items/name");
     }
     await context.sync();
+
+    return slides;
   }
 
-  function findManagedShape(slide) {
-    return (slide.shapes.items || []).find((shape) => shape.name === SHAPE_NAME) || null;
-  }
+  function upsertOnSlide(slide, slideIndex, label, slideSize) {
+    const existing = findManagedShape(slide);
+    const box = getFooterBox(slideSize);
 
-  function ensureShapeOnSlide(slide, label, size) {
-    let shape = findManagedShape(slide);
-
+    let shape = existing;
     if (!shape) {
-      shape = slide.shapes.addTextBox(label, getFooterBox(size));
-      shape.name = SHAPE_NAME;
+      shape = slide.shapes.addTextBox(label, box);
+    } else {
+      // Reposition in case theme/layout changed.
+      try { shape.left = box.left; } catch (_) {}
+      try { shape.top = box.top; } catch (_) {}
+      try { shape.width = box.width; } catch (_) {}
+      try { shape.height = box.height; } catch (_) {}
     }
 
+    // Name per slide to avoid collisions.
+    try { shape.name = getShapeNameForSlide(slideIndex); } catch (_) {}
+
     applyTextFormatting(shape, label);
-    return shape;
+    return true;
   }
 
   async function apply(label) {
@@ -138,20 +171,17 @@ window.LMPowerPointClassification = (function () {
     let updatedCount = 0;
 
     await PowerPoint.run(async (context) => {
-      const size = await getSlideSize(context);
-      const slides = loadSlides(context);
-      await context.sync();
+      const slideSize = await getSlideSize(context);
+      const slides = await loadSlidesAndShapeNames(context);
 
       if (!slides.items || slides.items.length === 0) {
         throw new Error("Presentation has no slides.");
       }
 
-      await loadShapeNamesForSlides(context, slides);
-
-      for (const slide of slides.items) {
-        ensureShapeOnSlide(slide, normalizedLabel, size);
-        updatedCount += 1;
-      }
+      slides.items.forEach((slide, index) => {
+        const ok = upsertOnSlide(slide, index, normalizedLabel, slideSize);
+        if (ok) updatedCount += 1;
+      });
 
       await context.sync();
     });
@@ -170,62 +200,33 @@ window.LMPowerPointClassification = (function () {
       return false;
     }
 
-    const knownLabels = new Set(getAllLabelTexts());
-    let allSlidesClassified = true;
+    let allSlidesHaveClassification = true;
 
     await PowerPoint.run(async (context) => {
-      const slides = loadSlides(context);
-      await context.sync();
+      const slides = await loadSlidesAndShapeNames(context);
 
       if (!slides.items || slides.items.length === 0) {
-        allSlidesClassified = false;
+        allSlidesHaveClassification = false;
         return;
       }
-
-      await loadShapeNamesForSlides(context, slides);
-
-      const managedShapes = [];
 
       for (const slide of slides.items) {
         const shape = findManagedShape(slide);
         if (!shape) {
-          allSlidesClassified = false;
-          return;
-        }
-
-        try {
-          shape.textFrame.load("hasText,textRange/text");
-          managedShapes.push(shape);
-        } catch (_) {
-          allSlidesClassified = false;
-          return;
-        }
-      }
-
-      await context.sync();
-
-      for (const shape of managedShapes) {
-        const text = normalizeText(shape.textFrame?.textRange?.text);
-        if (!text) {
-          allSlidesClassified = false;
-          return;
-        }
-
-        if (knownLabels.size && !knownLabels.has(text)) {
-          allSlidesClassified = false;
+          allSlidesHaveClassification = false;
           return;
         }
       }
     });
 
-    return allSlidesClassified;
+    return allSlidesHaveClassification;
   }
 
   return {
     apply,
     hasClassification,
     constants: {
-      SHAPE_NAME,
+      SHAPE_NAME_PREFIX,
       FONT_COLOR,
       FONT_SIZE
     }
