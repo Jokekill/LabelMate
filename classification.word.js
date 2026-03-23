@@ -88,12 +88,14 @@ window.LMWordClassification = (function () {
     if (headerBodies.length === 0) {
       const p = context.document.body.insertParagraph(label, "Start");
       const cc = p.insertContentControl();
-      lockAndTagContentControl(cc);
 
       const rng = cc.getRange("Content");
       rng.insertText(label, Word.InsertLocation.replace);
       applyClassificationStylingToRange(rng);
 
+      await context.sync();
+
+      lockAndTagContentControl(cc);
       await context.sync();
       return;
     }
@@ -119,12 +121,15 @@ window.LMWordClassification = (function () {
       } else {
         const p = headerBody.insertParagraph(label, "Start");
         const cc = p.insertContentControl();
-        lockAndTagContentControl(cc);
+        
 
         const rng = cc.getRange("Content");
         rng.insertText(label, Word.InsertLocation.replace);
         applyClassificationStylingToRange(rng);
 
+        await context.sync();
+
+        lockAndTagContentControl(cc);
         await context.sync();
       }
     }
