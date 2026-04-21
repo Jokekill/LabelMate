@@ -157,6 +157,50 @@ window.LMPowerPointClassification = (function () {
     return true;
   }
 
+  // --- NOVÉ: přečte aktuální label z prvního existujícího footeru v prezentaci.
+  // Používá se při auto-sync, abychom věděli, jaký text dopsat na nově přidané slidy.
+  async function readCurrentLabel(context, slides) {
+    const shapes = [];
+
+    for (const slide of slides.items) {
+      const shape = findManagedShape(slide);
+      if (shape) {
+        try {
+          shape.textFrame.textRange.load("text");
+          shapes.push(shape);
+        } catch (_) {}
+      }
+    }
+
+    if (!shapes.length) return null;
+
+    await context.sync();
+
+    for (const shape of shapes) {
+      try {
+        const text = normalizeText(shape.textFrame.textRange.text);
+        if (text) return text;
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  // --- NOVÉ: tiše doplní footer na slidy, kterým chybí (typicky nově přidané).
+  // Vrací počet slidů, na které byl footer dopsán.
+  function syncMissingSlides(slides, label, slideSize) {
+    let addedCount = 0;
+
+    slides.items.forEach((slide, index) => {
+      if (!findManagedShape(slide)) {
+        upsertOnSlide(slide, index, label, slideSize);
+        addedCount += 1;
+      }
+    });
+
+    return addedCount;
+  }
+
   async function apply(label) {
     await ensureReady();
 
@@ -194,6 +238,10 @@ window.LMPowerPointClassification = (function () {
     return updatedCount;
   }
 
+  // prezentace se považuje za klasifikovanou, pokud má label alespoň
+  // jeden slide. Chybějící slidy (typicky nově přidané) se auto-doplní stejným
+  // labelem, takže uživatel není nucen klasifikovat znovu.
+  // Pokud label nemá žádný slide, vrátíme false a banner se zobrazí jako dřív.
   async function hasClassification() {
     await ensureReady();
 
@@ -201,26 +249,35 @@ window.LMPowerPointClassification = (function () {
       return false;
     }
 
-    let allSlidesHaveClassification = true;
+    let classified = false;
 
     await PowerPoint.run(async (context) => {
       const slides = await loadSlidesAndShapeNames(context);
 
       if (!slides.items || slides.items.length === 0) {
-        allSlidesHaveClassification = false;
+        classified = false;
         return;
       }
 
-      for (const slide of slides.items) {
-        const shape = findManagedShape(slide);
-        if (!shape) {
-          allSlidesHaveClassification = false;
-          return;
-        }
+      const currentLabel = await readCurrentLabel(context, slides);
+
+      if (!currentLabel) {
+        // Nic není klasifikováno → banner se zobrazí, uživatel klasifikuje poprvé.
+        classified = false;
+        return;
       }
+
+      // Něco už klasifikováno je → tiše doplníme footer na slidy, kterým chybí.
+      const slideSize = await getSlideSize(context);
+      const added = syncMissingSlides(slides, currentLabel, slideSize);
+      if (added > 0) {
+        await context.sync();
+      }
+
+      classified = true;
     });
 
-    return allSlidesHaveClassification;
+    return classified;
   }
 
   return {
