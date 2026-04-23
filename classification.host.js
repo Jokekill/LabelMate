@@ -60,6 +60,29 @@ window.LM = window.LM || {};
     return null;
   }
 
+  async function markDocumentForAutoOpen() {
+  try {
+    await ensureOfficeReady();
+    const settings = Office?.context?.document?.settings;
+    if (!settings || typeof settings.set !== "function") return;
+
+    if (settings.get("Office.AutoShowTaskpaneWithDocument") === true) return;
+
+    settings.set("Office.AutoShowTaskpaneWithDocument", true);
+
+    await new Promise((resolve) => {
+      settings.saveAsync((result) => {
+        if (result.status !== Office.AsyncResultStatus.Succeeded) {
+          console.warn("AutoShowTaskpane save failed:", result.error);
+        }
+        resolve(); 
+      });
+    });
+  } catch (e) {
+    console.warn("markDocumentForAutoOpen:", e);
+  }
+}
+
   async function apply(label) {
     await ensureOfficeReady();
 
@@ -69,6 +92,8 @@ window.LM = window.LM || {};
     }
 
     const result = await engine.apply(label);
+
+    markDocumentForAutoOpen().catch(() => {});
 
     try {
       window.dispatchEvent(
