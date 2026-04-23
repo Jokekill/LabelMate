@@ -1,5 +1,4 @@
 // i18n.js
-// Doplnění textů potřebných pro staré Word UI: tooltip aria label a lokalizované statusy AUTO/MANUAL.
 window.LM_I18N = {
   EN: {
     appTitle: "LabelMate",

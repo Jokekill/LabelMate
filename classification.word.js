@@ -1,6 +1,3 @@
-// classification.word.js
-// Obnova původního Word chování: header-first content control, cleanup starých body labelů,
-// styling jako ve staré verzi a striktní ověření po zápisu.
 window.LMWordClassification = (function () {
   "use strict";
 

@@ -18,6 +18,19 @@ window.LMPowerPointClassification = (function () {
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function getKnownLabelTexts() {
+    const values = new Set();
+    const i18n = window.LM_I18N || {};
+
+    Object.values(i18n).forEach((lang) => {
+      (lang?.labels || []).forEach((item) => {
+        if (item?.text) values.add(normalizeText(item.text));
+      });
+    });
+
+    return values;
+  }
+
   function supportsPowerPointApi(version) {
     try {
       return Office.context.requirements.isSetSupported("PowerPointApi", version);
@@ -150,55 +163,60 @@ window.LMPowerPointClassification = (function () {
       try { shape.height = box.height; } catch (_) {}
     }
 
-    // Unikátní jméno per slide
     try { shape.name = getShapeNameForSlide(slideIndex); } catch (_) {}
 
     applyTextFormatting(shape, label);
     return true;
   }
 
-  // --- NOVÉ: přečte aktuální label z prvního existujícího footeru v prezentaci.
-  // Používá se při auto-sync, abychom věděli, jaký text dopsat na nově přidané slidy.
-  async function readCurrentLabel(context, slides) {
-    const shapes = [];
+  async function collectSlideShapeData(context, slides) {
+    const slideData = [];
 
     for (const slide of slides.items) {
       const shape = findManagedShape(slide);
       if (shape) {
         try {
           shape.textFrame.textRange.load("text");
-          shapes.push(shape);
         } catch (_) {}
       }
+      slideData.push({ slide, shape, text: "" });
     }
-
-    if (!shapes.length) return null;
 
     await context.sync();
 
-    for (const shape of shapes) {
+    for (const data of slideData) {
+      if (!data.shape) continue;
       try {
-        const text = normalizeText(shape.textFrame.textRange.text);
-        if (text) return text;
-      } catch (_) {}
+        data.text = normalizeText(data.shape.textFrame.textRange.text);
+      } catch (_) {
+        data.text = "";
+      }
     }
 
+    return slideData;
+  }
+
+  function findFirstValidLabel(slideData, knownLabels) {
+    for (const data of slideData) {
+      if (data.shape && data.text && knownLabels.has(data.text)) {
+        return data.text;
+      }
+    }
     return null;
   }
 
-  // --- NOVÉ: tiše doplní footer na slidy, kterým chybí (typicky nově přidané).
-  // Vrací počet slidů, na které byl footer dopsán.
-  function syncMissingSlides(slides, label, slideSize) {
-    let addedCount = 0;
+  function syncAllSlidesWithLabel(slideData, label, slideSize) {
+    let changedCount = 0;
 
-    slides.items.forEach((slide, index) => {
-      if (!findManagedShape(slide)) {
-        upsertOnSlide(slide, index, label, slideSize);
-        addedCount += 1;
-      }
+    slideData.forEach((data, index) => {
+      const needsUpdate = !data.shape || data.text !== label;
+      if (!needsUpdate) return;
+
+      upsertOnSlide(data.slide, index, label, slideSize);
+      changedCount += 1;
     });
 
-    return addedCount;
+    return changedCount;
   }
 
   async function apply(label) {
@@ -238,10 +256,6 @@ window.LMPowerPointClassification = (function () {
     return updatedCount;
   }
 
-  // prezentace se považuje za klasifikovanou, pokud má label alespoň
-  // jeden slide. Chybějící slidy (typicky nově přidané) se auto-doplní stejným
-  // labelem, takže uživatel není nucen klasifikovat znovu.
-  // Pokud label nemá žádný slide, vrátíme false a banner se zobrazí jako dřív.
   async function hasClassification() {
     await ensureReady();
 
@@ -259,18 +273,18 @@ window.LMPowerPointClassification = (function () {
         return;
       }
 
-      const currentLabel = await readCurrentLabel(context, slides);
+      const slideData = await collectSlideShapeData(context, slides);
+      const knownLabels = getKnownLabelTexts();
+      const validLabel = findFirstValidLabel(slideData, knownLabels);
 
-      if (!currentLabel) {
-        // Nic není klasifikováno → banner se zobrazí, uživatel klasifikuje poprvé.
+      if (!validLabel) {
         classified = false;
         return;
       }
 
-      // Něco už klasifikováno je → tiše doplníme footer na slidy, kterým chybí.
       const slideSize = await getSlideSize(context);
-      const added = syncMissingSlides(slides, currentLabel, slideSize);
-      if (added > 0) {
+      const changed = syncAllSlidesWithLabel(slideData, validLabel, slideSize);
+      if (changed > 0) {
         await context.sync();
       }
 

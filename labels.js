@@ -42,7 +42,7 @@ window.Labels = window.Labels || {};
       openTooltip.wrap.classList.remove("tooltip-open");
       openTooltip.btn.setAttribute("aria-expanded", "false");
     } catch (_) {
-      // ignore cleanup issues
+
     }
     openTooltip = null;
   }
